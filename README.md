@@ -1,22 +1,61 @@
-# PowerHelp – Offline-Prototyp
+# PowerHelp 2.0
 
-Eine kleine, vollständig lokale Webseite zum Zusammenstellen von Skripten für **Windows PowerShell 5.1**. Sie braucht keine Installation, keinen Webserver und keine Netzwerkverbindung.
+**Offline-Werkstatt für Windows PowerShell 5.1.** Eine einzige HTML-Datei mit 107 Bausteinen, 15 fertigen Abläufen, aufgabenorientierter Suche und Regex-Werkstatt. Ohne Installation, Webserver, externe Bibliotheken oder Online-KI.
 
-## Start
+[App öffnen](https://christian1binder.github.io/powerhelp/)
 
-`index.html` herunterladen und in Edge öffnen. Alternativ das Repository als ZIP herunterladen und `index.html` öffnen. Einen Baustein links auswählen, Felder in der Mitte ausfüllen und den erzeugten Code rechts prüfen. Über **Skript als .ps1 speichern** wird die Datei mit UTF-8-BOM heruntergeladen, damit Windows PowerShell 5.1 Umlaute im Skript erkennt.
+## Offline verwenden
 
-## Was der erste Stand kann
+`index.html` herunterladen und in Edge öffnen. Alternativ in der App **HTML herunterladen** wählen. Der Browser braucht danach keine Internetverbindung. Die Content Security Policy verhindert Netzwerkaufrufe der App; es werden keine Dateien an einen Dienst übertragen.
 
-- Ordner anlegen, Dateien suchen, kopieren und verschieben; Dateiliste als CSV exportieren.
-- Lokale Benutzer und Gruppen anzeigen, lokale Gruppe anlegen, Mitglied hinzufügen.
-- Textdateien mit einem **.NET-kompatiblen regulären Ausdruck** durchsuchen, benannte oder nummerierte Treffergruppe auslesen und die Treffer als CSV speichern.
-- Erforderliche Eingaben, identische Quelle/Ziel und einige Abhängigkeiten in der Schrittreihenfolge prüfen.
+## Arbeitsablauf
 
-Das Beispiel zeigt eine Suche nach `Kundennummer:` in mehreren UTF-8-Textdateien. Eine Zeile wie `Kundennummer: 12345` führt zum Wert `12345` in der CSV. Das Regex-Feld akzeptiert auch andere .NET-Muster; die Gruppe kann `wert`, `1` oder `0` (gesamter Treffer) heißen.
+1. Aufgabe, Stichwort oder Cmdlet suchen, zum Beispiel „alte Dateien löschen“, „Benutzer CSV“, „NTFS Rechte“ oder `Get-ChildItem`.
+2. Einzelne Bausteine hinzufügen oder einen fertigen Ablauf laden. Die Suche nutzt Synonyme und toleriert Tippfehler.
+3. Felder anpassen. Texte werden als PowerShell-Literale zitiert; **fx** wechselt zu einem sichtbaren PowerShell-Ausdruck, etwa `$Datei.FullName`.
+4. Ausgabenamen festlegen und später als Eingabevariablen verwenden. Die Ablaufprüfung meldet fehlende Quellschritte.
+5. Schleifen, Bedingungen, Funktionen und Fehlerbehandlung verschachteln. Schritte derselben Ebene mit ↑/↓ oder durch Ziehen ordnen.
+6. Projekt als JSON sichern oder Skript mit UTF-8-BOM und Windows-Zeilenenden als `.ps1` exportieren.
 
-## Grenzen
+Die App speichert das Projekt lokal im Browser, soweit lokale Speicherung erlaubt ist. Eine exportierte Projektdatei lässt sich später wieder öffnen. PowerHelp-Projekte enthalten die eingetragenen Werte und eigenen Code; Kennwörter werden von den bereitgestellten Kontobausteinen erst im ausgeführten Skript verdeckt abgefragt.
 
-Die Webseite **führt kein Skript aus** und kann ohne lokale Komponente weder die tatsächliche PowerShell-Syntax noch vorhandene Module oder Zugriffsrechte prüfen. Die Regex-Syntax wird erst durch PowerShell bei der Ausführung validiert. Die Regex-Funktion liest Eingabedateien derzeit als UTF-8. Lokale Benutzer-/Gruppenbefehle benötigen das Windows-Modul `Microsoft.PowerShell.LocalAccounts` in einer passenden Windows PowerShell 5.1-Umgebung; das Modul fehlt in der 32-Bit-PowerShell auf einem 64-Bit-System. „Lokal“ bezieht sich auf den Rechner, auf dem das erzeugte Skript später läuft.
+## Abgedeckte Bereiche
 
-Der Code wird als Text ausgegeben. Vor der Ausführung auf einem Server sollten Pfade, Dateimuster und Auswirkungen des Skripts geprüft werden. Dieser Prototyp enthält bewusst noch keine Ausführungsfunktion.
+- Dateien, Ordner, Hashes, Archive, Robocopy und Zeilenextraktion.
+- Text, Regex, Ersetzen, CSV, JSON, Filter, Sortierung und Berichte.
+- Lokale Benutzer, Gruppen und Kennwortänderungen.
+- NTFS-Rechte und SMB-Freigaben.
+- Dienste, Prozesse, Netzwerk, DNS, TCP-Ports und Firewall.
+- Systeminformationen, Ereignisprotokolle, Datenträger und Registry.
+- Aufgabenplanung und internes PowerShell-Remoting.
+- Active Directory, wenn das Modul bereits installiert ist.
+- Variablen, verschachtelte Schleifen/Bedingungen, Funktionen, try/catch und eigener PowerShell-Code.
+
+Die Bibliothek enthält verbreitete Administratoraufgaben. Sie ist kein vollständiger Katalog aller Windows-Rollen oder Cmdlet-Parameter. Eigene Codeblöcke ermöglichen die Erweiterung eines Ablaufs mit beliebigem PowerShell-Code.
+
+## Regex-Werkstatt
+
+Beispieltext eingeben oder eine lokale Textdatei laden, Muster und Treffergruppe auswählen, Werte als CSV exportieren oder das Muster in den Skriptablauf übernehmen. Die Vorschau arbeitet in einem Worker mit Zeitlimit, sodass aufwendige Muster abgebrochen werden können. Maximal 1000 Treffer und 100.000 Textzeichen in der Vorschau.
+
+**Engine-Unterschied:** Die Vorschau verwendet JavaScript-RegExp. Führende .NET-Flags `(?i)`, `(?m)`, `(?s)` werden für die Vorschau umgesetzt. Das erzeugte PowerShell-Skript verwendet die .NET-Regex-Engine. Erweiterte .NET-Muster können daher im Skript gültig sein, obwohl der Browser sie nicht unterstützt, oder abweichende Ergebnisse liefern.
+
+## Vorschau-Modus
+
+Bekannte Änderungsbausteine werden mit `$PSCmdlet.ShouldProcess` geschützt. Der standardmäßig aktivierte Vorschau-Modus setzt `$WhatIfPreference = $true`. Exportierte Skripte akzeptieren zusätzlich `-WhatIf`. Lesebefehle werden trotzdem ausgeführt. Bei eigenem Code und Remoting bestimmt das Feld **Wirkung**, ob der Code geschützt wird. Ein optionales Transkript wird auch im Vorschau-Modus geschrieben.
+
+## Kompatibilität und Grenzen
+
+Ziel: Windows PowerShell 5.1 auf Windows 10/11 und Windows Server ab 2016. AD-, SMB-, Netzwerk-, Storage- und Aufgabenplanungsbefehle benötigen die passenden bereits vorhandenen Windows-Module und Berechtigungen. PowerHelp installiert keine Module. LocalAccounts steht auf Domänencontrollern und in 32-Bit-PowerShell auf einem 64-Bit-System nicht zur Verfügung.
+
+Die App führt keine Skripte aus und enthält keinen echten PowerShell-Parser. Die Prüfung erfasst Pflichtfelder, ausgewählte Werte, bekannte Variablenabhängigkeiten und einige typische Fehler. Eigene Ausdrücke, vorhandene Pfade, Berechtigungen, Serverrollen und Dateninhalte bleiben abhängig von der Ausführungsumgebung. Vorschau-Variablen aus übersprungenen Änderungsbefehlen können ohne Ergebnis bleiben.
+
+## Entwicklung und Tests
+
+Quelltexte liegen in `src/`. `python3 build.py` erzeugt daraus die einzelne `index.html`; Python benötigt keine Zusatzpakete. Zum Nutzen der App ist Python nicht erforderlich.
+
+```sh
+node tests/test-core.js
+node tests/generate-cases.js cases.json
+```
+
+Die GitHub-Actions-Prüfung führt den Generatortest aus und prüft 122 erzeugte Skripte mit dem Parser von Windows PowerShell 5.1. Sie kontrolliert außerdem Parameter der auf dem Prüfrechner verfügbaren Cmdlets. Dabei werden keine generierten Administratorbefehle ausgeführt.
