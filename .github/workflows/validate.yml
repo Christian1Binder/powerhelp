@@ -1,0 +1,19 @@
+name: Validate PowerHelp
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test generator and search
+        run: node tests/test-core.js
+      - name: Generate parser cases
+        run: node tests/generate-cases.js cases.json
+      - name: Check syntax with Windows PowerShell 5.1
+        shell: powershell
+        run: ./tests/validate-powershell.ps1 -CaseFile cases.json
