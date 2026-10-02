@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; worker-src blob:; img-src data:; connect-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="description" content="PowerHelp: Offline-Baukasten für Windows PowerShell 5.1. Serveraufgaben, Regex, Suche, Vorlagen und Skript-Export.">
+<title>PowerHelp · Offline-PowerShell-Werkstatt</title>
+<style>/*__STYLE__*/</style>
+</head>
+<body>
+<header>
+ <div class="brand"><span class="logo" aria-hidden="true">&gt;_</span><div><h1>PowerHelp <small>2.0</small></h1><span class="offline">Offline · Windows PowerShell 5.1</span></div></div>
+ <div class="header-actions"><button id="newProject">Neu</button><button id="importProject">Projekt öffnen</button><button id="saveProject">Projekt speichern</button><button id="regexOpen">Regex-Werkstatt</button><button id="settingsOpen">Optionen</button><button id="helpOpen" aria-label="Hilfe">?</button><button class="primary" id="exportScript">.ps1 exportieren</button></div>
+</header>
+<main class="app">
+ <aside class="library" aria-label="Befehlsbibliothek">
+  <label class="searchlabel" for="search">Welche Aufgabe möchtest du lösen?</label>
+  <input class="searchbox" id="search" type="search" placeholder="z. B. alte Dateien löschen" autocomplete="off">
+  <div class="searchchips"><button data-search="Regex Daten extrahieren">Regex</button><button data-search="Benutzer CSV">Benutzer aus CSV</button><button data-search="NTFS Rechte">NTFS</button><button data-search="Backup">Backup</button></div>
+  <div class="tabs" role="tablist" aria-label="Bibliothekstyp"><button role="tab" aria-selected="true" id="commandsTab">Bausteine</button><button role="tab" aria-selected="false" id="templatesTab">Fertige Abläufe</button></div>
+  <label class="visually-hidden" for="category">Kategorie</label><select id="category"></select>
+  <p class="resultcount" id="resultcount" aria-live="polite"></p>
+  <div id="results"></div>
+ </aside>
+ <section class="workspace" aria-label="Skriptablauf">
+  <div class="workspace-title"><label class="visually-hidden" for="projectTitle">Projektname</label><input id="projectTitle" value="Mein Skript" maxlength="150"><button id="collapseAll" title="Alle Schritte einklappen">Einklappen</button></div>
+  <div class="subline"><span id="stepCount"></span><span class="mode on" id="modeBadge">Vorschau-Modus</span><span id="autosave">Lokal gespeichert</span></div>
+  <div class="insert-target" id="insertTarget" hidden></div>
+  <div class="statusbar" id="status" aria-live="polite"></div>
+  <div id="steps"></div>
+ </section>
+ <section class="preview" aria-label="Skriptvorschau">
+  <div class="preview-head"><h2>PowerShell-Code</h2><button id="copyCode">Kopieren</button></div>
+  <small>Die Vorschau folgt deinem Ablauf.</small>
+  <pre class="code" id="code" tabindex="0" aria-label="Generiertes Skript"></pre>
+  <details class="collapsible" open><summary id="issuesSummary">Ablaufprüfung</summary><div id="issues" class="issues" aria-live="polite"></div></details>
+  <details class="collapsible"><summary>Ausgabevariablen im Ablauf</summary><div class="variable-chips" id="variables"></div><small>Ein Klick kopiert den Variablennamen.</small></details>
+  <p class="footer-note">Die Seite erzeugt Skripte und führt sie nicht aus. Prüfungen im Browser sind Regeln; die echte PowerShell-Syntax wird hier nicht ausgeführt.</p>
+ </section>
+</main>
+<input id="projectFile" type="file" accept=".json,.powerhelp" hidden>
+<dialog id="settingsDialog" aria-labelledby="settingsTitle">
+ <div class="dialoghead"><h2 id="settingsTitle">Skriptoptionen</h2><button data-close="settingsDialog" aria-label="Optionen schließen">×</button></div>
+ <div class="settings-grid">
+  <label class="check"><input id="previewMode" type="checkbox" checked>Vorschau-Modus: Änderungen durch ShouldProcess überspringen</label>
+  <p class="dialognote">Lesebefehle laufen weiterhin. Für den Echtbetrieb diese Option deaktivieren. Exportierte Skripte unterstützen außerdem <code>-WhatIf</code>. Eigener Code muss mit der passenden Wirkung gekennzeichnet sein.</p>
+  <label class="check"><input id="commentsMode" type="checkbox" checked>Schritte im Code kommentieren</label>
+  <label>Optionale Skriptparameter <textarea id="scriptParams" placeholder="[string]$Quellordner = 'C:\Daten'"></textarea></label>
+  <label class="check"><input id="transcriptMode" type="checkbox">Konsolenausgabe protokollieren (Start-Transcript)</label>
+  <label>Protokollpfad <input id="logPath" value="C:\Daten\PowerHelp.log"></label>
+ </div>
+</dialog>
+<dialog id="regexDialog" aria-labelledby="regexTitle">
+ <div class="dialoghead"><h2 id="regexTitle">Regex-Werkstatt</h2><button data-close="regexDialog" aria-label="Regex-Werkstatt schließen">×</button></div>
+ <div class="dialoggrid"><div><h3>Beispieltext</h3><label class="visually-hidden" for="regexText">Beispieltext für Regex</label><textarea id="regexText">Kundennummer: 12345
+Kundennummer: AB-6789
+Datum: 02.10.2026</textarea><div class="dialogcontrols"><label>Textdatei laden <input id="regexFile" type="file" accept=".txt,.log,.csv,.json"></label><label>Dateikodierung <select id="regexEncoding"><option value="utf-8">UTF-8</option><option value="windows-1252">Windows-1252 / ANSI</option><option value="utf-16le">UTF-16 LE</option></select></label></div></div><div><h3>Suchausdruck</h3><label class="visually-hidden" for="regexPattern">Regex-Muster</label><textarea id="regexPattern">(?m)^Kundennummer:\s*(?&lt;wert&gt;\S+)</textarea><div class="dialogcontrols"><label>Treffergruppe <input id="regexGroup" value="wert"></label><label>Beispielmuster <select id="regexExample"><option value="customer">Kundennummer</option><option value="email">E-Mail-Adresse</option><option value="ip">IPv4-Muster</option><option value="date">Datum TT.MM.JJJJ</option><option value="number">Zahl nach ID:</option></select></label></div></div></div>
+ <p class="regex-note">Die Vorschau verwendet die Regex-Engine des Browsers. Führende .NET-Flags wie (?im) werden übertragen; .NET-spezifische Funktionen können abweichen. PowerShell verwendet später die .NET-Engine. Maximal 1000 Treffer und 100.000 Zeichen pro Vorschau.</p>
+ <div class="dialogcontrols"><button class="primary" id="testRegex">Treffer anzeigen</button><button id="addRegex">Als Baustein übernehmen</button><button id="exportRegexCsv">Vorschautreffer als CSV</button></div>
+ <p id="regexStatus" aria-live="polite"></p><div class="regex-result" id="regexResults"></div>
+</dialog>
+<dialog id="helpDialog" class="help" aria-labelledby="helpTitle">
+ <div class="dialoghead"><h2 id="helpTitle">PowerHelp verwenden</h2><button data-close="helpDialog" aria-label="Hilfe schließen">×</button></div>
+ <h3>Vom Ziel zum Ablauf</h3><p>Suche nach einer Aufgabe, einem Befehl oder einem Stichwort. Die Suche berücksichtigt deutsche Begriffe, Synonyme und Tippfehler. Unter „Fertige Abläufe“ findest du kombinierte Schritte. Ein Ablauf kann angehängt oder als neues Projekt geladen werden.</p>
+ <h3>Bausteine und Variablen</h3><p>Jeder Leseschritt kann seine Ausgabe in einer Variable ablegen. Nachfolgende Schritte verwenden diesen Namen. Die Ablaufprüfung erkennt fehlende Quellvariablen. Mit <code>fx</code> schaltest du ein Textfeld auf einen PowerShell-Ausdruck um, etwa <code>$Datei.FullName</code>. Normale Texte werden automatisch richtig zitiert.</p>
+ <h3>Schleifen, Bedingungen und Funktionen</h3><p>Füge einen Block hinzu und klicke auf „In diesen Block einfügen“. Weitere Bausteine landen dann innerhalb des Blocks. Mit „Im Hauptablauf einfügen“ wechselst du zurück. Schritte lassen sich per ↑/↓ oder durch Ziehen innerhalb derselben Ebene ordnen.</p>
+ <h3>Speichern und weiterarbeiten</h3><p>Das Projekt wird nach Änderungen im Browser gespeichert, soweit der Browser lokale Speicherung erlaubt. „Projekt speichern“ exportiert eine JSON-Datei inklusive Ablauf und Optionen. Die .ps1-Datei enthält ausführbaren PowerShell-Code mit UTF-8-BOM. Das Projekt ist keine .ps1-Datei; eigener Code kann über den freien Codebaustein ergänzt werden.</p>
+ <h3>Offline und Umgebung</h3><p>Alle Inhalte, Vorlagen und Prüfregeln sind in dieser HTML-Datei enthalten. Es gibt keine Online-KI und keine Netzwerkaufrufe. Das Ziel ist Windows PowerShell 5.1 auf Windows 10/11 beziehungsweise Windows Server ab 2016. Rollenmodule wie ActiveDirectory müssen bereits vorhanden sein. Auf Domänencontrollern stehen lokale Benutzerbefehle nicht zur Verfügung. Rechte und Serverrollen hängen von deiner Umgebung ab.</p>
+ <h3>Vorschau und Fehler</h3><p>Änderungsbausteine werden mit <code>$PSCmdlet.ShouldProcess</code> geschützt. Der Vorschau-Modus aktiviert <code>$WhatIfPreference</code>. Eigener Code mit „Nur lesen“ bekommt keinen solchen Schutz. Befehle zum Lesen werden dabei ausgeführt. Diese Seite ist kein PowerShell-Parser: eigene Ausdrücke, Dateiinhalt, Berechtigungen und tatsächlich vorhandene Module lassen sich offline im Browser nicht abschließend prüfen.</p>
+</dialog>
+<div class="toast" id="toast" role="status" hidden></div>
+<script>/*__SCRIPT__*/</script>
+</body>
+</html>
