@@ -1,214 +1,520 @@
 <!doctype html>
 <html lang="de">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>PowerShell-Baukasten · Offline-Prototyp</title>
-  <style>
-    :root { color-scheme: dark; font: 16px/1.45 system-ui, Segoe UI, sans-serif; background:#0a1423; color:#ecf3ff }
-    * { box-sizing:border-box }
-    body { margin:0 }
-    button, input { font:inherit }
-    button { border:1px solid #445a77; background:#172b44; color:#edf5ff; padding:.65rem .8rem; border-radius:.6rem; cursor:pointer }
-    button:hover, button:focus-visible { background:#244363; outline-color:#6dbdfd }
-    button:disabled { opacity:.42; cursor:default }
-    .primary { background:#38a5db; border-color:#38a5db; color:#061c30; font-weight:700 }
-    .primary:hover { background:#6bc5ee }
-    header { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:1rem; padding:1.25rem 1.5rem; border-bottom:1px solid #344762; background:#0e1e32 }
-    h1 { font-size:1.35rem; margin:0 }
-    h2 { font-size:1.06rem; margin:0 0 .75rem }
-    h3 { font-size:1rem; margin:0 }
-    p { margin:.35rem 0 .85rem; color:#bad0e6 }
-    .small { font-size:.87rem; color:#a9bdd2 }
-    .tag { display:inline-block; background:#203c58; padding:.2rem .55rem; border-radius:999px; font-size:.77rem; margin-left:.5rem; vertical-align:middle }
-    main { display:grid; grid-template-columns: minmax(220px,290px) minmax(370px,1fr) minmax(370px,1fr); min-height:calc(100vh - 80px) }
-    section { padding:1.2rem; min-width:0; border-right:1px solid #344762 }
-    section:last-child { border:0; background:#0c192a }
-    .catalog { display:grid; gap:.55rem }
-    .catalog button { text-align:left; display:grid; gap:.12rem }
-    .catalog small { font-size:.8rem; color:#bad0e6 }
-    .step { background:#13283d; border:1px solid #3c5873; border-radius:.8rem; padding:1rem; margin-bottom:.8rem }
-    .stephead { display:flex; align-items:start; justify-content:space-between; gap:.5rem }
-    .actions { display:flex; flex-wrap:wrap; gap:.35rem; justify-content:flex-end }
-    .actions button { padding:.25rem .5rem; font-size:.86rem }
-    .fields { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:.65rem; margin-top:.9rem }
-    label { display:grid; gap:.25rem; color:#d7e8f8; font-size:.89rem }
-    input { width:100%; border:1px solid #5d7691; border-radius:.4rem; background:#091a2b; color:#fff; padding:.55rem }
-    input:focus-visible { outline:2px solid #65bdff }
-    .warning { background:#45351d; border:1px solid #ad7e2a; color:#ffe3aa; border-radius:.5rem; padding:.7rem; margin:.6rem 0 }
-    .ok { color:#b3e1ca; padding:.4rem 0 }
-    pre { margin:.75rem 0; padding:1rem; min-height:17rem; background:#07111e; color:#c7e7ff; border:1px solid #36506b; border-radius:.6rem; white-space:pre-wrap; overflow-wrap:anywhere; font: .86rem/1.55 Consolas, 'Courier New', monospace }
-    .toolbar { display:flex; gap:.5rem; flex-wrap:wrap }
-    .empty { border:1px dashed #60748b; border-radius:.8rem; padding:1.4rem; color:#bed0e0 }
-    .footnote { margin-top:1rem; font-size:.86rem }
-    @media(max-width:1100px) { main { grid-template-columns:260px 1fr } section:last-child { grid-column:1/-1; border-top:1px solid #344762 } }
-    @media(max-width:700px) { main { display:block } section { border-right:0; border-bottom:1px solid #344762 } }
-  </style>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; worker-src blob:; img-src data:; connect-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="description" content="PowerHelp: Offline-Baukasten für Windows PowerShell 5.1. Serveraufgaben, Regex, Suche, Vorlagen und Skript-Export.">
+<title>PowerHelp · Offline-PowerShell-Werkstatt</title>
+<style>:root{color-scheme:light;--bg:#edf2f7;--surface:#fff;--text:#15283d;--muted:#52667b;--line:#d4dfeb;--blue:#075da7;--dark:#0e2238;--cyan:#76d5eb;--danger:#ae263b;--amber:#80550c;font:16px/1.5 'Segoe UI',system-ui,sans-serif}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text)}button,input,textarea,select{font:inherit}button{cursor:pointer;border:1px solid var(--line);background:#fff;color:var(--text);border-radius:7px;padding:.48rem .7rem;line-height:1.4}button:hover{border-color:#81a7c9;background:#f0f7fd}button:disabled{opacity:.45;cursor:default}button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible{outline:3px solid #50b6ef;outline-offset:2px}.primary{background:var(--blue);color:#fff;border-color:var(--blue);font-weight:650}.primary:hover{background:#064e8b;color:#fff}.quiet{background:transparent}.danger{color:var(--danger)}input,select,textarea{width:100%;min-width:0;border:1px solid #b5c6d8;border-radius:6px;padding:.48rem .6rem;background:#fff;color:var(--text)}textarea{resize:vertical;min-height:90px}header{background:var(--dark);color:#fff;padding:.9rem 1.3rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;border-bottom:3px solid #23a3c3}.brand{display:flex;gap:.8rem;align-items:center}.logo{color:var(--cyan);font:700 1.4rem Consolas,monospace;border:1px solid #45647e;border-radius:6px;padding:.2rem .5rem}.brand h1{font-size:1.35rem;margin:0}.brand small{color:#b9cfdf;font-size:.8rem}.header-actions{display:flex;flex-wrap:wrap;gap:.45rem}.header-actions button{background:#203b54;border-color:#4b677f;color:#f4f9ff}.header-actions .primary{background:#58cae6;border-color:#58cae6;color:#05293b}.header-actions button:hover{background:#315573}.header-actions .primary:hover{background:#8cdcef}.offline{color:#b3e9c4;font-size:.8rem;letter-spacing:.04em;text-transform:uppercase}.app{display:grid;grid-template-columns:minmax(280px,330px) minmax(400px,1fr) minmax(330px,450px);height:calc(100dvh - 90px);min-height:620px}.library{background:#f8fafc;border-right:1px solid var(--line);padding:1rem;overflow:auto}.workspace{overflow:auto;padding:1rem 1.2rem 2rem;min-width:0}.preview{background:#0e2238;color:#e4effa;display:flex;flex-direction:column;min-width:0;overflow:auto;border-left:1px solid #c4d3e3;padding:1rem}.searchlabel{font-size:.9rem;font-weight:700;display:block;margin-bottom:.35rem}.searchbox{font-size:1rem;padding:.7rem .8rem;border:1px solid #7b9ebe}.tabs{display:flex;margin:1rem 0 .8rem;gap:.3rem;border-bottom:1px solid var(--line);padding-bottom:.55rem}.tabs button{flex:1;font-weight:650}.tabs button[aria-selected=true]{background:#d9edfc;color:#034e8b;border-color:#7aafda}.searchchips{display:flex;flex-wrap:wrap;gap:.35rem;margin:.55rem 0 .85rem}.searchchips button{font-size:.8rem;padding:.22rem .45rem;background:#e7eff7}.resultcount{color:var(--muted);font-size:.85rem;margin:.7rem 0}.result{border:1px solid var(--line);background:#fff;padding:.8rem;border-radius:8px;margin-bottom:.6rem}.result h3{font-size:.97rem;margin:0 0 .2rem}.result p{font-size:.85rem;line-height:1.45;color:var(--muted);margin:.35rem 0 .6rem}.result code{font-size:.8rem;color:#075487;font-family:Consolas,monospace}.result .buttons{display:flex;gap:.35rem;align-items:center;flex-wrap:wrap}.result .buttons button{padding:.35rem .6rem;font-size:.83rem}.badge{display:inline-block;font-size:.75rem;padding:.14rem .4rem;background:#eaf0f6;color:#3a536a;border-radius:4px}.badge.change{background:#fff0d6;color:#80550c}.badge.module{background:#e7eafd;color:#424c89;overflow-wrap:anywhere}.workspace-title{display:flex;justify-content:space-between;align-items:center;gap:.6rem;margin-bottom:.8rem}.workspace-title input{font-size:1.25rem;font-weight:650;background:transparent;border:1px solid transparent;max-width:600px}.workspace-title input:focus{background:white;border-color:#8dadc8}.subline{display:flex;gap:.55rem;flex-wrap:wrap;align-items:center;color:var(--muted);font-size:.85rem;margin-bottom:1rem}.mode{padding:.25rem .6rem;border-radius:5px;font-weight:650;background:#fff0d6;color:#755012}.mode.on{background:#dbf2e7;color:#21633e}.insert-target{background:#dcefff;border:1px solid #a4cae8;padding:.65rem .8rem;border-radius:7px;font-size:.88rem;margin-bottom:.8rem;display:flex;justify-content:space-between;align-items:center;gap:.4rem}.step{border:1px solid #becfe0;border-radius:8px;background:white;margin-bottom:.65rem;box-shadow:0 1px 2px #20304009}.step.selected{border-color:#4c9cd2;box-shadow:0 0 0 1px #4c9cd2}.step summary{list-style:none;cursor:pointer;padding:.8rem;display:flex;gap:.6rem;align-items:flex-start}.step summary::-webkit-details-marker{display:none}.stepnum{background:#e3edf6;color:#255577;border-radius:5px;min-width:1.6rem;padding:.1rem .25rem;text-align:center;font-size:.82rem}.steplabel{flex:1;min-width:0}.steplabel strong{font-size:.94rem}.steplabel code{display:block;color:var(--muted);font: .78rem/1.4 Consolas,monospace;overflow-wrap:anywhere;margin-top:.15rem}.step-actions{display:flex;gap:.2rem;flex-wrap:wrap;justify-content:end;max-width:145px}.step-actions button{font-size:.82rem;padding:.2rem .35rem}.step-body{padding:0 .8rem .8rem}.fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:.7rem;margin-top:.5rem}.field{display:grid;align-content:start;gap:.22rem;min-width:0}.fieldlabel{display:flex;align-items:center;justify-content:space-between;font-size:.84rem;font-weight:600;gap:.3rem}.fieldlabel button{font:.74rem Consolas,monospace;padding:.12rem .3rem;color:#08619c}.fieldlabel button.active{background:#d9edfc;border-color:#81b4d9}.field.wide{grid-column:1/-1}.field textarea{font:.87rem/1.5 Consolas,monospace}.check{display:flex;gap:.5rem;align-items:center;font-size:.86rem;font-weight:500;padding:.25rem 0}.check input{width:17px;height:17px}.helptext{font-size:.79rem;color:var(--muted)}.description{margin:.15rem 0 .65rem;color:var(--muted);font-size:.85rem}.outfield{margin-top:.65rem;padding-top:.65rem;border-top:1px dashed var(--line)}.children{margin:.7rem 0 0 .3rem;border-left:3px solid #a5c9e3;padding-left:.8rem}.block-tools{display:flex;gap:.4rem;flex-wrap:wrap;margin-top:.65rem}.block-tools button{font-size:.82rem}.step-error{font-size:.82rem;color:#a52537;padding:.5rem;background:#fff0f0;border-radius:5px;margin-top:.5rem}.empty{border:1px dashed #a0b5c9;border-radius:9px;padding:1.4rem;color:var(--muted);text-align:center}.empty h3{color:var(--text);font-size:1.1rem}.preview h2{margin:0;font-size:1rem}.preview-head{display:flex;justify-content:space-between;align-items:center;gap:.5rem}.preview small{color:#b3c9db}.preview button{background:#203e58;color:#edf7ff;border-color:#58768f;font-size:.83rem}.code{flex:1;overflow:auto;min-height:260px;max-height:60vh;background:#071625;border:1px solid #304b63;border-radius:7px;margin:.8rem 0;padding:.9rem;white-space:pre;tab-size:4;font:.83rem/1.55 Consolas,'Courier New',monospace;color:#d5e9f8}.issues{font-size:.82rem;line-height:1.45}.issue{padding:.55rem .65rem;border:1px solid #726348;background:#352f22;border-radius:5px;margin:.4rem 0;color:#ffdda0}.issue.error{color:#ffbdc8;background:#3b2430;border-color:#8e4659}.issue button{border:0;background:transparent;color:inherit;padding:0;text-align:left;font-size:inherit;width:100%}.checkok{color:#a9e2c2}.footer-note{font-size:.77rem;color:#a6bdd0;margin-top:.6rem}.variable-chips{display:flex;gap:.3rem;flex-wrap:wrap;margin:.7rem 0}.variable-chips button{font:.8rem Consolas,monospace;background:#203e58;color:#d5e9f8;border-color:#577790}.preview .collapsible{border-top:1px solid #37556e;padding-top:.5rem}.preview .collapsible summary{cursor:pointer;padding:.3rem 0;font-size:.85rem;color:#b8d2e5}.statusbar{font-size:.8rem;color:var(--muted);min-height:1.2rem;margin-bottom:.5rem}dialog{width:min(1000px,94vw);max-height:92dvh;border:1px solid #a6bdcf;border-radius:12px;box-shadow:0 20px 80px #001a3659;padding:1.4rem;background:#f7fafc;color:var(--text)}dialog::backdrop{background:#081728aa}.dialoghead{display:flex;justify-content:space-between;gap:1rem;align-items:center;margin-bottom:1rem}.dialoghead h2{margin:0;font-size:1.2rem}.dialoghead button{min-width:38px}.dialoggrid{display:grid;grid-template-columns:1fr 1fr;gap:1rem}.dialoggrid h3{font-size:.97rem;margin:.3rem 0}.dialoggrid textarea{min-height:220px;font:.87rem/1.5 Consolas,monospace}.dialogcontrols{display:flex;align-items:end;gap:.6rem;flex-wrap:wrap;margin:.8rem 0}.dialogcontrols label{min-width:120px;flex:1;font-size:.86rem;display:grid;gap:.3rem}.regex-note{font-size:.85rem;color:#52667b;background:#e6f0f7;border-radius:6px;padding:.65rem}.regex-result{overflow:auto;max-height:300px}.regex-result table{width:100%;border-collapse:collapse;background:white;font-size:.84rem}.regex-result th,.regex-result td{padding:.4rem .6rem;border-bottom:1px solid var(--line);text-align:left;overflow-wrap:anywhere;max-width:500px}.regex-result td:last-child{white-space:pre-wrap}.dialognote{color:var(--muted);font-size:.88rem}.settings-grid{display:grid;gap:.9rem}.settings-grid label{display:grid;gap:.3rem;font-size:.9rem}.settings-grid .check{display:flex}.help h3{font-size:1rem;color:#0c588b}.help p,.help li{font-size:.92rem;line-height:1.65}.help code{font-family:Consolas,monospace;background:#e6eef5;padding:.1rem .25rem}.toast{position:fixed;bottom:1rem;left:50%;transform:translateX(-50%);max-width:90vw;background:#17354f;color:#fff;padding:.7rem 1.2rem;border-radius:8px;box-shadow:0 5px 20px #11223344;z-index:99}.visually-hidden{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}.dragover{outline:3px dashed #57a5d9}.clearsearch{width:auto;margin-left:.4rem}@media(min-width:1500px){.app{grid-template-columns:350px minmax(480px,1fr) 510px}}@media(max-width:1180px){.app{grid-template-columns:290px 1fr;height:auto;min-height:0}.library{max-height:calc(100dvh - 100px);position:sticky;top:0}.workspace{min-height:650px}.preview{grid-column:1/-1;min-height:450px;border-top:1px solid #37556e}.code{max-height:600px}}@media(max-width:720px){header{padding:.7rem}.header-actions{gap:.3rem}.header-actions button{font-size:.82rem}.brand h1{font-size:1.15rem}.app{display:block}.library{position:static;max-height:480px;border-bottom:1px solid var(--line)}.workspace{min-height:300px;padding:1rem .7rem}.preview{padding:.8rem}.fields,.dialoggrid{grid-template-columns:1fr}.step-actions{max-width:120px}.step summary{padding:.65rem;gap:.35rem}.children{margin-left:0;padding-left:.5rem}.workspace-title input{font-size:1.1rem}.code{font-size:.8rem}.dialogcontrols{align-items:stretch}.dialogcontrols button{width:100%}dialog{padding:1rem}.preview .code{white-space:pre-wrap;overflow-wrap:anywhere}}
+</style>
 </head>
 <body>
-  <header>
-    <div><h1>PowerShell-Baukasten <span class="tag">Prototyp · offline</span></h1><div class="small">Windows PowerShell 5.1 · lokale Verwaltung und Dateien</div></div>
-    <button id="sample">Beispielablauf laden</button>
-  </header>
-  <main>
-    <section aria-labelledby="catalog-title">
-      <h2 id="catalog-title">1 · Baustein hinzufügen</h2>
-      <p class="small">Ein Klick fügt den Schritt am Ende ein.</p>
-      <div class="catalog" id="catalog"></div>
-    </section>
-    <section aria-labelledby="steps-title">
-      <h2 id="steps-title">2 · Ablauf festlegen</h2>
-      <p class="small">Felder ausfüllen, Reihenfolge mit ↑ und ↓ ändern.</p>
-      <div id="steps" aria-live="polite"></div>
-    </section>
-    <section aria-labelledby="preview-title">
-      <h2 id="preview-title">3 · Skript prüfen und speichern</h2>
-      <div id="feedback" aria-live="polite"></div>
-      <div class="toolbar">
-        <button class="primary" id="download">Skript als .ps1 speichern</button>
-        <button id="copy">Code kopieren</button>
-      </div>
-      <pre id="code" aria-label="PowerShell-Code"></pre>
-      <p class="footnote">Die Seite erzeugt Code im Browser und führt ihn nicht aus. Die Prüfung erkennt Regeln dieses Prototyps, ersetzt aber keinen PowerShell-Parser und keinen Probelauf.</p>
-    </section>
-  </main>
-  <script>
-  'use strict';
-  // Jede Definition enthält die Formularfelder und genau einen Codegenerator.
-  // PowerShell-Literale werden nur über psQuote() erzeugt, um Eingaben abzugrenzen.
-  const defs = {
-    folder: { title:'Ordner anlegen', detail:'Erstellt einen Ordner, falls nötig.', fields:[['path','Ordnerpfad','C:\\Daten\\Archiv']], code:v=>`New-Item -ItemType Directory -Path ${psQuote(v.path)} -Force -ErrorAction Stop | Out-Null` },
-    files: { title:'Dateien suchen', detail:'Legt das Ergebnis in $Dateien ab.', fields:[['path','Suchordner','C:\\Daten'],['filter','Dateimuster','*.txt']], code:v=>`$Dateien = @(Get-ChildItem -LiteralPath ${psQuote(v.path)} -Filter ${psQuote(v.filter)} -File -ErrorAction Stop)` },
-    export: { title:'Dateiliste als CSV speichern', detail:'Verwendet $Dateien aus „Dateien suchen“.', fields:[['path','CSV-Zieldatei','C:\\Daten\\dateiliste.csv']], code:v=>`$Dateien | Select-Object Name, FullName, Length, LastWriteTime | Export-Csv -LiteralPath ${psQuote(v.path)} -NoTypeInformation -Delimiter ';' -Encoding UTF8 -ErrorAction Stop` },
-    regex: { title:'Regex aus Textdateien', detail:'Liest Textdateien und sammelt Treffer in $Treffer.', fields:[['path','Suchordner','C:\\Daten'],['filter','Dateimuster','*.txt'],['pattern','Regulärer Ausdruck','(?m)^Kundennummer:\\s*(?<wert>\\S+)'],['group','Gruppe (Name oder Nummer)','wert']], code:v=>`$Treffer = @(foreach ($Datei in Get-ChildItem -LiteralPath ${psQuote(v.path)} -Filter ${psQuote(v.filter)} -File -ErrorAction Stop) {\r\n    $Inhalt = [string](Get-Content -LiteralPath $Datei.FullName -Raw -Encoding UTF8 -ErrorAction Stop)\r\n    foreach ($Fund in [regex]::Matches($Inhalt, ${psQuote(v.pattern)})) {\r\n        $Teil = $Fund.Groups[${/^\d+$/.test(v.group)?Number(v.group):psQuote(v.group)}]\r\n        if ($Teil.Success) {\r\n            [pscustomobject]@{ Datei = $Datei.FullName; Wert = $Teil.Value }\r\n        }\r\n    }\r\n})` },
-    exportRegex: { title:'Regex-Treffer als CSV', detail:'Verwendet $Treffer aus „Regex aus Textdateien“.', fields:[['path','CSV-Zieldatei','C:\\Daten\\treffer.csv']], code:v=>`$Treffer | Export-Csv -LiteralPath ${psQuote(v.path)} -NoTypeInformation -Delimiter ';' -Encoding UTF8 -ErrorAction Stop` },
-    copy: { title:'Datei oder Ordner kopieren', detail:'Kopiert die angegebene Quelle.', fields:[['source','Quellpfad','C:\\Daten\\Bericht.txt'],['target','Zielpfad','C:\\Archiv\\Bericht.txt']], code:v=>`Copy-Item -LiteralPath ${psQuote(v.source)} -Destination ${psQuote(v.target)} -Recurse -ErrorAction Stop` },
-    move: { title:'Datei oder Ordner verschieben', detail:'Verschiebt die angegebene Quelle.', fields:[['source','Quellpfad','C:\\Daten\\Bericht.txt'],['target','Zielpfad','C:\\Archiv\\Bericht.txt']], code:v=>`Move-Item -LiteralPath ${psQuote(v.source)} -Destination ${psQuote(v.target)} -ErrorAction Stop` },
-    users: { title:'Lokale Benutzer auflisten', detail:'Zeigt lokale Konten des ausführenden Rechners.', fields:[], code:()=>`Get-LocalUser | Select-Object Name, Enabled, Description | Format-Table -AutoSize` },
-    groups: { title:'Lokale Gruppen auflisten', detail:'Zeigt lokale Gruppen des ausführenden Rechners.', fields:[], code:()=>`Get-LocalGroup | Select-Object Name, Description | Format-Table -AutoSize` },
-    newgroup: { title:'Lokale Gruppe anlegen', detail:'Erstellt eine neue lokale Gruppe.', fields:[['group','Gruppenname','Projektteam']], code:v=>`New-LocalGroup -Name ${psQuote(v.group)} -ErrorAction Stop | Out-Null` },
-    addmember: { title:'Mitglied zur lokalen Gruppe', detail:'Fügt ein lokales Konto oder DOMÄNE\\Konto hinzu.', fields:[['group','Gruppenname','Projektteam'],['member','Benutzer oder DOMÄNE\\Benutzer','Max']], code:v=>`Add-LocalGroupMember -Group ${psQuote(v.group)} -Member ${psQuote(v.member)} -ErrorAction Stop` }
-  };
-  const state = [];
-  let nextId = 1;
-  const $ = id => document.getElementById(id);
-  const psQuote = value => "'" + value.replace(/'/g,"''") + "'";
-  const badInput = value => /[\r\n\u0000-\u001f]/.test(value);
+<header>
+ <div class="brand"><span class="logo" aria-hidden="true">&gt;_</span><div><h1>PowerHelp <small>2.0</small></h1><span class="offline">Offline · Windows PowerShell 5.1</span></div></div>
+ <div class="header-actions"><button id="newProject">Neu</button><button id="importProject">Projekt öffnen</button><button id="saveProject">Projekt speichern</button><button id="regexOpen">Regex-Werkstatt</button><button id="settingsOpen">Optionen</button><button id="helpOpen" aria-label="Hilfe">?</button><button class="primary" id="exportScript">.ps1 exportieren</button></div>
+</header>
+<main class="app">
+ <aside class="library" aria-label="Befehlsbibliothek">
+  <label class="searchlabel" for="search">Welche Aufgabe möchtest du lösen?</label>
+  <input class="searchbox" id="search" type="search" placeholder="z. B. alte Dateien löschen" autocomplete="off">
+  <div class="searchchips"><button data-search="Regex Daten extrahieren">Regex</button><button data-search="Benutzer CSV">Benutzer aus CSV</button><button data-search="NTFS Rechte">NTFS</button><button data-search="Backup">Backup</button></div>
+  <div class="tabs" role="tablist" aria-label="Bibliothekstyp"><button role="tab" aria-selected="true" id="commandsTab">Bausteine</button><button role="tab" aria-selected="false" id="templatesTab">Fertige Abläufe</button></div>
+  <label class="visually-hidden" for="category">Kategorie</label><select id="category"></select>
+  <p class="resultcount" id="resultcount" aria-live="polite"></p>
+  <div id="results"></div>
+ </aside>
+ <section class="workspace" aria-label="Skriptablauf">
+  <div class="workspace-title"><label class="visually-hidden" for="projectTitle">Projektname</label><input id="projectTitle" value="Mein Skript" maxlength="150"><button id="collapseAll" title="Alle Schritte einklappen">Einklappen</button></div>
+  <div class="subline"><span id="stepCount"></span><span class="mode on" id="modeBadge">Vorschau-Modus</span><span id="autosave">Lokal gespeichert</span></div>
+  <div class="insert-target" id="insertTarget" hidden></div>
+  <div class="statusbar" id="status" aria-live="polite"></div>
+  <div id="steps"></div>
+ </section>
+ <section class="preview" aria-label="Skriptvorschau">
+  <div class="preview-head"><h2>PowerShell-Code</h2><button id="copyCode">Kopieren</button></div>
+  <small>Die Vorschau folgt deinem Ablauf.</small>
+  <pre class="code" id="code" tabindex="0" aria-label="Generiertes Skript"></pre>
+  <details class="collapsible" open><summary id="issuesSummary">Ablaufprüfung</summary><div id="issues" class="issues" aria-live="polite"></div></details>
+  <details class="collapsible"><summary>Ausgabevariablen im Ablauf</summary><div class="variable-chips" id="variables"></div><small>Ein Klick kopiert den Variablennamen.</small></details>
+  <p class="footer-note">Die Seite erzeugt Skripte und führt sie nicht aus. Prüfungen im Browser sind Regeln; die echte PowerShell-Syntax wird hier nicht ausgeführt.</p>
+ </section>
+</main>
+<input id="projectFile" type="file" accept=".json,.powerhelp" hidden>
+<dialog id="settingsDialog" aria-labelledby="settingsTitle">
+ <div class="dialoghead"><h2 id="settingsTitle">Skriptoptionen</h2><button data-close="settingsDialog" aria-label="Optionen schließen">×</button></div>
+ <div class="settings-grid">
+  <label class="check"><input id="previewMode" type="checkbox" checked>Vorschau-Modus: Änderungen durch ShouldProcess überspringen</label>
+  <p class="dialognote">Lesebefehle laufen weiterhin. Für den Echtbetrieb diese Option deaktivieren. Exportierte Skripte unterstützen außerdem <code>-WhatIf</code>. Eigener Code muss mit der passenden Wirkung gekennzeichnet sein.</p>
+  <label class="check"><input id="commentsMode" type="checkbox" checked>Schritte im Code kommentieren</label>
+  <label>Optionale Skriptparameter <textarea id="scriptParams" placeholder="[string]$Quellordner = 'C:\Daten'"></textarea></label>
+  <label class="check"><input id="transcriptMode" type="checkbox">Konsolenausgabe protokollieren (Start-Transcript)</label>
+  <label>Protokollpfad <input id="logPath" value="C:\Daten\PowerHelp.log"></label>
+ </div>
+</dialog>
+<dialog id="regexDialog" aria-labelledby="regexTitle">
+ <div class="dialoghead"><h2 id="regexTitle">Regex-Werkstatt</h2><button data-close="regexDialog" aria-label="Regex-Werkstatt schließen">×</button></div>
+ <div class="dialoggrid"><div><h3>Beispieltext</h3><label class="visually-hidden" for="regexText">Beispieltext für Regex</label><textarea id="regexText">Kundennummer: 12345
+Kundennummer: AB-6789
+Datum: 02.10.2026</textarea><div class="dialogcontrols"><label>Textdatei laden <input id="regexFile" type="file" accept=".txt,.log,.csv,.json"></label><label>Dateikodierung <select id="regexEncoding"><option value="utf-8">UTF-8</option><option value="windows-1252">Windows-1252 / ANSI</option><option value="utf-16le">UTF-16 LE</option></select></label></div></div><div><h3>Suchausdruck</h3><label class="visually-hidden" for="regexPattern">Regex-Muster</label><textarea id="regexPattern">(?m)^Kundennummer:\s*(?&lt;wert&gt;\S+)</textarea><div class="dialogcontrols"><label>Treffergruppe <input id="regexGroup" value="wert"></label><label>Beispielmuster <select id="regexExample"><option value="customer">Kundennummer</option><option value="email">E-Mail-Adresse</option><option value="ip">IPv4-Muster</option><option value="date">Datum TT.MM.JJJJ</option><option value="number">Zahl nach ID:</option></select></label></div></div></div>
+ <p class="regex-note">Die Vorschau verwendet die Regex-Engine des Browsers. Führende .NET-Flags wie (?im) werden übertragen; .NET-spezifische Funktionen können abweichen. PowerShell verwendet später die .NET-Engine. Maximal 1000 Treffer und 100.000 Zeichen pro Vorschau.</p>
+ <div class="dialogcontrols"><button class="primary" id="testRegex">Treffer anzeigen</button><button id="addRegex">Als Baustein übernehmen</button><button id="exportRegexCsv">Vorschautreffer als CSV</button></div>
+ <p id="regexStatus" aria-live="polite"></p><div class="regex-result" id="regexResults"></div>
+</dialog>
+<dialog id="helpDialog" class="help" aria-labelledby="helpTitle">
+ <div class="dialoghead"><h2 id="helpTitle">PowerHelp verwenden</h2><button data-close="helpDialog" aria-label="Hilfe schließen">×</button></div>
+ <h3>Vom Ziel zum Ablauf</h3><p>Suche nach einer Aufgabe, einem Befehl oder einem Stichwort. Die Suche berücksichtigt deutsche Begriffe, Synonyme und Tippfehler. Unter „Fertige Abläufe“ findest du kombinierte Schritte. Ein Ablauf kann angehängt oder als neues Projekt geladen werden.</p>
+ <h3>Bausteine und Variablen</h3><p>Jeder Leseschritt kann seine Ausgabe in einer Variable ablegen. Nachfolgende Schritte verwenden diesen Namen. Die Ablaufprüfung erkennt fehlende Quellvariablen. Mit <code>fx</code> schaltest du ein Textfeld auf einen PowerShell-Ausdruck um, etwa <code>$Datei.FullName</code>. Normale Texte werden automatisch richtig zitiert.</p>
+ <h3>Schleifen, Bedingungen und Funktionen</h3><p>Füge einen Block hinzu und klicke auf „In diesen Block einfügen“. Weitere Bausteine landen dann innerhalb des Blocks. Mit „Im Hauptablauf einfügen“ wechselst du zurück. Schritte lassen sich per ↑/↓ oder durch Ziehen innerhalb derselben Ebene ordnen.</p>
+ <h3>Speichern und weiterarbeiten</h3><p>Das Projekt wird nach Änderungen im Browser gespeichert, soweit der Browser lokale Speicherung erlaubt. „Projekt speichern“ exportiert eine JSON-Datei inklusive Ablauf und Optionen. Die .ps1-Datei enthält ausführbaren PowerShell-Code mit UTF-8-BOM. Das Projekt ist keine .ps1-Datei; eigener Code kann über den freien Codebaustein ergänzt werden.</p>
+ <h3>Offline und Umgebung</h3><p>Alle Inhalte, Vorlagen und Prüfregeln sind in dieser HTML-Datei enthalten. Es gibt keine Online-KI und keine Netzwerkaufrufe. Das Ziel ist Windows PowerShell 5.1 auf Windows 10/11 beziehungsweise Windows Server ab 2016. Rollenmodule wie ActiveDirectory müssen bereits vorhanden sein. Auf Domänencontrollern stehen lokale Benutzerbefehle nicht zur Verfügung. Rechte und Serverrollen hängen von deiner Umgebung ab.</p>
+ <h3>Vorschau und Fehler</h3><p>Änderungsbausteine werden mit <code>$PSCmdlet.ShouldProcess</code> geschützt. Der Vorschau-Modus aktiviert <code>$WhatIfPreference</code>. Eigener Code mit „Nur lesen“ bekommt keinen solchen Schutz. Befehle zum Lesen werden dabei ausgeführt. Diese Seite ist kein PowerShell-Parser: eigene Ausdrücke, Dateiinhalt, Berechtigungen und tatsächlich vorhandene Module lassen sich offline im Browser nicht abschließend prüfen.</p>
+</dialog>
+<div class="toast" id="toast" role="status" hidden></div>
+<script>/* PowerHelp 2: curated Windows PowerShell 5.1 building blocks.
+ * Parameters carry types. Text is always emitted as a single-quoted literal.
+ * Expressions are deliberately separate and remain visible as code.
+ */
+const PH_VERSION = '2.0.0';
+const PH_CATEGORIES = ['Dateien & Ordner','Text & Regex','CSV & Daten','Benutzer & Gruppen','Berechtigungen & Freigaben','Dienste & Prozesse','Netzwerk','System & Ereignisse','Aufgabenplanung','Active Directory','Skriptlogik'];
+const F = (key,label,type='text',value='',extra={})=>({key,label,type,value,...extra});
+const S = (key,label,value='',extra={})=>F(key,label,'text',value,extra);
+const E = (key,label,value='',extra={})=>F(key,label,'expr',value,extra);
+const V = (key,label,value='Daten',extra={})=>F(key,label,'var',value,extra);
+const B = (key,label,value=false,extra={})=>F(key,label,'bool',value,extra);
+const N = (key,label,value=10,extra={})=>F(key,label,'number',value,extra);
+const C = (key,label,options,value=options[0],extra={})=>F(key,label,'enum',value,{options,...extra});
+const OPT = {optional:true};
+const PH_COMMANDS = [];
+function cmd(id,title,category,command,description,fields=[],extra={}) {
+  PH_COMMANDS.push({id,title,category,command,description,fields,keywords:'',...extra});
+}
+const P = 'Dateien & Ordner', T = 'Text & Regex', D = 'CSV & Daten', U = 'Benutzer & Gruppen', A = 'Berechtigungen & Freigaben', SV = 'Dienste & Prozesse', NET = 'Netzwerk', SYS = 'System & Ereignisse', TASK = 'Aufgabenplanung', AD = 'Active Directory', LOGIC = 'Skriptlogik';
+cmd('files','Dateien und Ordner suchen',P,'Get-ChildItem','Sucht nach Dateimustern; optional auch in Unterordnern.',[S('LiteralPath','Suchordner','C:\\Daten'),S('Filter','Dateimuster','*.txt'),B('Recurse','Unterordner durchsuchen'),B('File','Nur Dateien',true),B('Directory','Nur Ordner'),B('Force','Versteckte Elemente einbeziehen')],{out:'Dateien',keywords:'finden suchen auflisten rekursiv verzeichnis dir gci ls dateiliste'});
+cmd('mkdir','Ordner anlegen',P,'New-Item','Erstellt ein Verzeichnis. Mit Force darf es bereits existieren.',[S('Path','Ordnerpfad','C:\\Daten\\Export'),C('ItemType','Elementtyp',['Directory'],'Directory'),B('Force','Vorhandenen Ordner akzeptieren',true)],{mutates:true,keywords:'erstellen verzeichnis neu mkdir'});
+cmd('copy','Dateien oder Ordner kopieren',P,'Copy-Item','Kopiert einen konkreten Pfad. Für viele Dateien: Suchschritt und Schleife verwenden.',[S('LiteralPath','Quelle','C:\\Daten\\Bericht.txt'),S('Destination','Ziel','C:\\Archiv\\Bericht.txt'),B('Recurse','Unterordner mitkopieren'),B('Force','Schreibschutz überschreiben')],{mutates:true,keywords:'backup sichern kopieren copy cp'});
+cmd('move','Dateien oder Ordner verschieben',P,'Move-Item','Verschiebt Dateien oder Verzeichnisse an den Zielpfad.',[S('LiteralPath','Quelle','C:\\Daten\\Bericht.txt'),S('Destination','Ziel','C:\\Archiv\\Bericht.txt'),B('Force','Ersetzen erzwingen')],{mutates:true,keywords:'verschieben umziehen archivieren mv'});
+cmd('rename','Datei oder Ordner umbenennen',P,'Rename-Item','NewName ist der neue Name, kein anderer Zielordner.',[S('LiteralPath','Vorhandener Pfad','C:\\Daten\\alt.txt'),S('NewName','Neuer Name','neu.txt')],{mutates:true,keywords:'rename umbenennen name ändern'});
+cmd('remove','Datei oder Ordner entfernen',P,'Remove-Item','Entfernt den angegebenen Pfad; keine Papierkorb-Funktion.',[S('LiteralPath','Zu entfernender Pfad','C:\\Temp\\alt.txt'),B('Recurse','Inhalt von Ordnern mitentfernen'),B('Force','Versteckte/geschützte Elemente entfernen')],{mutates:true,risk:'Löscht dauerhaft.',keywords:'löschen entfernen aufräumen delete rm bereinigen'});
+cmd('exists','Pfad auf Existenz prüfen',P,'Test-Path','Liefert True oder False. Kann als Bedingung verwendet werden.',[S('LiteralPath','Pfad','C:\\Daten'),C('PathType','Gesuchter Typ',['Any','Container','Leaf'])],{out:'PfadExistiert',keywords:'existiert vorhanden prüfen test'});
+cmd('item','Dateieigenschaften lesen',P,'Get-Item','Liest das Objekt zu einem einzelnen Pfad.',[S('LiteralPath','Pfad','C:\\Daten\\Bericht.txt')],{out:'Datei',keywords:'größe eigenschaften datum details metadata'});
+cmd('hash','Datei-Prüfsumme berechnen',P,'Get-FileHash','Berechnet einen Hash, um Dateien zu vergleichen oder Integrität zu prüfen.',[S('LiteralPath','Datei','C:\\Daten\\Bericht.txt'),C('Algorithm','Hash-Verfahren',['SHA256','SHA512','SHA1','MD5'])],{out:'Pruefsumme',keywords:'checksum hash doppelte duplikate integrität sha256'});
+cmd('zip','ZIP-Archiv erstellen',P,'Compress-Archive','Komprimiert Dateien oder Ordner; Archive über 2 GB und versteckte Dateien haben Einschränkungen.',[S('LiteralPath','Quelle','C:\\Daten'),S('DestinationPath','ZIP-Datei','C:\\Backup\\Daten.zip'),B('Force','Archiv ersetzen')],{mutates:true,keywords:'zip komprimieren packen backup archiv'});
+cmd('unzip','ZIP-Archiv entpacken',P,'Expand-Archive','Entpackt ein ZIP-Archiv in einen Ordner.',[S('LiteralPath','ZIP-Datei','C:\\Backup\\Daten.zip'),S('DestinationPath','Zielordner','C:\\Restore'),B('Force','Dateien ersetzen')],{mutates:true,keywords:'zip entpacken wiederherstellen unzip'});
+cmd('joinpath','Pfadteile verbinden',P,'Join-Path','Verbindet einen Basisordner und einen Unterpfad.',[S('Path','Basisordner','C:\\Daten'),S('ChildPath','Unterpfad','Export\\liste.csv')],{out:'Zielpfad',keywords:'pfad zusammenbauen kombinieren'});
+cmd('robocopy','Ordner robust sichern',P,'robocopy','Kopiert mit Wiederholungen, erhält Daten/Attribute/Zeitstempel. Exitcodes ab 8 werden als Fehler behandelt.',[S('source','Quellordner','C:\\Daten'),S('target','Zielordner','D:\\Backup'),B('recurse','Unterordner einschließen',true),B('mirror','Ziel spiegeln (löscht zusätzliche Zieldateien)'),N('retries','Wiederholungen',2),N('wait','Wartezeit in Sekunden',3)],{kind:'robocopy',mutates:true,keywords:'robocopy backup spiegeln synchronisieren sicherung mirror'});
+cmd('read','Textdatei lesen',T,'Get-Content','Liest eine Datei als Zeilen oder als gesamten Text.',[S('LiteralPath','Dateipfad','C:\\Daten\\bericht.txt'),B('Raw','Gesamte Datei als ein Text',true),C('Encoding','Zeichenkodierung',['UTF8','Default','Unicode','ASCII'],'UTF8')],{out:'Text',keywords:'lesen inhalt text laden zeilen cat gc'});
+cmd('write','Textdatei schreiben',T,'Set-Content','Ersetzt den Dateiinhalt durch den angegebenen Wert.',[S('LiteralPath','Dateipfad','C:\\Daten\\ergebnis.txt'),S('Value','Text','Beispieltext'),C('Encoding','Zeichenkodierung',['UTF8','Default','Unicode','ASCII'],'UTF8')],{mutates:true,keywords:'schreiben speichern text ausgabe überschreiben'});
+cmd('append','Text an Datei anhängen',T,'Add-Content','Fügt Text am Ende einer Datei hinzu.',[S('LiteralPath','Dateipfad','C:\\Daten\\protokoll.txt'),S('Value','Text','Eintrag'),C('Encoding','Zeichenkodierung',['UTF8','Default','Unicode','ASCII'],'UTF8')],{mutates:true,keywords:'anhängen append protokoll log'});
+cmd('selectstring','Text in Dateien finden',T,'Select-String','Sucht mit Regex; die Ausgabe enthält unter anderem Dateiname und Zeilennummer.',[S('LiteralPath','Dateipfad','C:\\Daten\\bericht.txt'),S('Pattern','Regex / Suchtext','Fehler|Error'),B('SimpleMatch','Als wörtlichen Text suchen'),B('CaseSensitive','Groß-/Kleinschreibung beachten'),C('Encoding','Zeichenkodierung',['UTF8','Default','Unicode','ASCII'],'UTF8')],{out:'Texttreffer',keywords:'grep suchen regex match zeile fehler auswerten'});
+cmd('regex','Daten mit Regex extrahieren',T,'[regex]::Matches','Sammelt Treffer aus mehreren Textdateien und liest eine benannte oder nummerierte Gruppe aus.',[S('folder','Suchordner','C:\\Daten'),S('filter','Dateimuster','*.txt'),S('pattern','Regulärer Ausdruck','(?m)^Kundennummer:\\s*(?<wert>\\S+)'),S('group','Treffergruppe (0 = gesamter Treffer)','wert'),C('encoding','Zeichenkodierung',['UTF8','Default','Unicode','ASCII'],'UTF8'),B('recurse','Unterordner durchsuchen')],{kind:'regex',out:'Treffer',keywords:'extrahieren auslesen id kundennummer email datum regulärer ausdruck capture gruppen daten'});
+cmd('replace','Text mit Regex ersetzen',T,'-replace','Ersetzt in einer vorhandenen Textvariablen. Rückverweise wie $1 werden als Text eingetragen.',[V('input','Textvariable','Text'),S('pattern','Regex','\\s+'),S('replacement','Ersetzung',' ',{allowEmpty:true})],{kind:'replace',out:'BereinigterText',uses:['input'],keywords:'replace ersetzen bereinigen austauschen regex'});
+cmd('split','Text aufteilen',T,'-split','Teilt eine Textvariable anhand eines Regex-Trenners auf.',[V('input','Textvariable','Text'),S('pattern','Trenner als Regex',';')],{kind:'split',out:'Teile',uses:['input'],keywords:'split trennen aufteilen zerlegen'});
+cmd('csvin','CSV-Datei einlesen',D,'Import-Csv','Liest Tabellenzeilen als Objekte für Schleifen und Filter.',[S('LiteralPath','CSV-Datei','C:\\Daten\\import.csv'),C('Delimiter','Trennzeichen',[';',',','TAB'],';'),C('Encoding','Zeichenkodierung',['UTF8','Default','Unicode','ASCII'],'UTF8')],{out:'Datensaetze',keywords:'csv import einlesen excel tabelle massenimport'});
+cmd('csvout','Daten als CSV exportieren',D,'Export-Csv','Exportiert eine vorhandene Variable. Erst am Ende formatieren, nicht vor diesem Export.',[V('input','Datenvariable','Treffer'),S('LiteralPath','CSV-Zieldatei','C:\\Daten\\Export\\ergebnis.csv'),C('Delimiter','Trennzeichen',[';',',','TAB'],';'),C('Encoding','Zeichenkodierung',['UTF8','Default','Unicode','ASCII'],'UTF8'),B('NoTypeInformation','Typzeile weglassen',true)],{inputField:'input',uses:['input'],mutates:true,keywords:'csv export ausgabe speichern excel tabelle'});
+cmd('jsonin','JSON-Text einlesen',D,'ConvertFrom-Json','Wandelt eine Textvariable in PowerShell-Objekte um.',[V('input','JSON-Textvariable','Text')],{inputField:'input',uses:['input'],out:'JsonDaten',keywords:'json import parsen objekt'});
+cmd('jsonout','Daten in JSON umwandeln',D,'ConvertTo-Json','Wandelt eine Datenvariable in JSON-Text um.',[V('input','Datenvariable','Datensaetze'),N('Depth','Maximale Tiefe',10,{min:1,max:100})],{inputField:'input',uses:['input'],out:'JsonText',keywords:'json export serialisieren'});
+cmd('where','Daten filtern',D,'Where-Object','Filtert mit einem sichtbaren PowerShell-Ausdruck. $_ ist das aktuelle Objekt.',[V('input','Datenvariable','Dateien'),E('condition','Filterausdruck',"$_.Length -gt 1MB")],{kind:'where',uses:['input'],out:'Auswahl',keywords:'filtern where bedingung älter größer enabled auswählen'});
+cmd('sort','Daten sortieren',D,'Sort-Object','Sortiert nach einer oder mehreren Eigenschaften.',[V('input','Datenvariable','Dateien'),F('Property','Eigenschaften (Komma getrennt)','list','LastWriteTime'),B('Descending','Absteigend sortieren'),B('Unique','Doppelte Werte entfernen')],{inputField:'input',uses:['input'],out:'SortierteDaten',keywords:'sortieren reihenfolge unique duplikate doppelte'});
+cmd('select','Eigenschaften auswählen',D,'Select-Object','Wählt Eigenschaften für Berichte und Exporte aus.',[V('input','Datenvariable','Dateien'),F('Property','Eigenschaften (Komma getrennt)','list','Name, FullName, Length, LastWriteTime')],{inputField:'input',uses:['input'],out:'Bericht',keywords:'select eigenschaften spalten auswählen bericht'});
+cmd('measure','Anzahl und Summen berechnen',D,'Measure-Object','Berechnet Anzahl und optional Summe oder Durchschnitt einer Eigenschaft.',[V('input','Datenvariable','Dateien'),S('Property','Eigenschaft','Length',OPT),B('Sum','Summe bilden',true),B('Average','Durchschnitt bilden')],{inputField:'input',uses:['input'],out:'Statistik',keywords:'zählen summe anzahl statistik größe durchschnitt'});
+cmd('group','Daten gruppieren',D,'Group-Object','Gruppiert Objekte nach einer Eigenschaft.',[V('input','Datenvariable','Dateien'),S('Property','Eigenschaft','Extension')],{inputField:'input',uses:['input'],out:'GruppierteDaten',keywords:'gruppieren zusammenfassen group count'});
+cmd('compare','Zwei Datenlisten vergleichen',D,'Compare-Object','Zeigt Unterschiede zwischen zwei Variablen.',[V('ReferenceObject','Referenzliste','Alt'),V('DifferenceObject','Vergleichsliste','Neu'),F('Property','Eigenschaften','list','Name',OPT)],{out:'Unterschiede',uses:['ReferenceObject','DifferenceObject'],keywords:'vergleichen unterschied compare diff listen'});
+cmd('table','Daten als Tabelle anzeigen',D,'Format-Table','Nur für die Anzeige verwenden. Die Ausgabe ist kein Datensatz für CSV-Exporte.',[V('input','Datenvariable','Dateien'),F('Property','Eigenschaften','list','Name, Length',OPT),B('AutoSize','Spaltenbreite anpassen',true)],{inputField:'input',uses:['input'],keywords:'tabelle anzeigen ausgabe formatieren'});
+cmd('users','Lokale Benutzer auflisten',U,'Get-LocalUser','Liest lokale Benutzer des ausführenden Rechners.',[S('Name','Benutzername (leer = alle)','',OPT)],{out:'Benutzer',module:'Microsoft.PowerShell.LocalAccounts',keywords:'benutzer konten user lokal auflisten anzeigen'});
+cmd('newuser','Lokalen Benutzer anlegen',U,'New-LocalUser','Das Kennwort wird erst bei der Skriptausführung verdeckt abgefragt.',[S('Name','Benutzername','Max'),S('FullName','Vollständiger Name','Max Beispiel'),S('Description','Beschreibung','Projektkonto',OPT),B('PasswordNeverExpires','Kennwort läuft nie ab')],{kind:'newuser',module:'Microsoft.PowerShell.LocalAccounts',mutates:true,keywords:'benutzer konto erstellen neu kennwort passwort'});
+cmd('setuser','Lokalen Benutzer ändern',U,'Set-LocalUser','Ändert Name/Beschreibung eines bestehenden Kontos.',[S('Name','Benutzername','Max'),S('FullName','Vollständiger Name','Max Beispiel'),S('Description','Beschreibung','Projektkonto',OPT)],{module:'Microsoft.PowerShell.LocalAccounts',mutates:true,keywords:'user benutzer ändern beschreibung'});
+cmd('enableuser','Lokalen Benutzer aktivieren',U,'Enable-LocalUser','Aktiviert ein vorhandenes lokales Konto.',[S('Name','Benutzername','Max')],{module:'Microsoft.PowerShell.LocalAccounts',mutates:true,keywords:'user benutzer konto aktivieren entsperren'});
+cmd('disableuser','Lokalen Benutzer deaktivieren',U,'Disable-LocalUser','Deaktiviert ein vorhandenes lokales Konto.',[S('Name','Benutzername','Max')],{module:'Microsoft.PowerShell.LocalAccounts',mutates:true,keywords:'user benutzer konto deaktivieren sperren'});
+cmd('deluser','Lokalen Benutzer entfernen',U,'Remove-LocalUser','Entfernt das lokale Konto. Profildaten werden damit nicht automatisch bereinigt.',[S('Name','Benutzername','Max')],{module:'Microsoft.PowerShell.LocalAccounts',mutates:true,risk:'Entfernt ein Benutzerkonto.',keywords:'user benutzer löschen entfernen'});
+cmd('groups','Lokale Gruppen auflisten',U,'Get-LocalGroup','Liest lokale Gruppen des ausführenden Rechners.',[S('Name','Gruppenname (leer = alle)','',OPT)],{out:'Gruppen',module:'Microsoft.PowerShell.LocalAccounts',keywords:'gruppen anzeigen auflisten lokal'});
+cmd('newgroup','Lokale Gruppe anlegen',U,'New-LocalGroup','Erstellt eine lokale Sicherheitsgruppe.',[S('Name','Gruppenname','Projektteam'),S('Description','Beschreibung','Projektmitglieder',OPT)],{module:'Microsoft.PowerShell.LocalAccounts',mutates:true,keywords:'gruppe erstellen anlegen neu'});
+cmd('members','Gruppenmitglieder auflisten',U,'Get-LocalGroupMember','Liest die Mitglieder einer lokalen Gruppe.',[S('Group','Gruppenname','Projektteam')],{out:'Mitglieder',module:'Microsoft.PowerShell.LocalAccounts',keywords:'mitgliedschaft mitglieder gruppe prüfen'});
+cmd('addmember','Mitglied zur lokalen Gruppe hinzufügen',U,'Add-LocalGroupMember','Fügt ein lokales Konto oder DOMÄNE\\Konto hinzu.',[S('Group','Gruppenname','Projektteam'),S('Member','Benutzer / DOMÄNE\\Konto','Max')],{module:'Microsoft.PowerShell.LocalAccounts',mutates:true,keywords:'gruppe mitglied hinzufügen berechtigung'});
+cmd('delmember','Mitglied aus lokaler Gruppe entfernen',U,'Remove-LocalGroupMember','Entfernt eine lokale Gruppenmitgliedschaft.',[S('Group','Gruppenname','Projektteam'),S('Member','Benutzer / DOMÄNE\\Konto','Max')],{module:'Microsoft.PowerShell.LocalAccounts',mutates:true,keywords:'gruppe mitglied entfernen entziehen'});
+cmd('acl','NTFS-Berechtigungen lesen',A,'Get-Acl','Liest den Sicherheitsdeskriptor eines Pfads.',[S('LiteralPath','Datei oder Ordner','C:\\Daten')],{out:'Acl',keywords:'ntfs rechte berechtigungen acl lesen zugriff'});
+cmd('grant','NTFS-Berechtigung hinzufügen',A,'Get-Acl / Set-Acl','Ergänzt eine Zugriffsregel und erhält bestehende Regeln. Vererbung wird separat ausgewählt.',[S('path','Ordnerpfad','C:\\Daten'),S('identity','Benutzer oder Gruppe','Projektteam'),C('rights','Berechtigung',['ReadAndExecute','Modify','FullControl','Read','Write'],'Modify'),B('inherit','Für Unterordner und Dateien vererben',true)],{kind:'aclgrant',mutates:true,keywords:'ntfs rechte zugriff erlauben berechtigen modify vollzugriff ordner'});
+cmd('shares','SMB-Freigaben auflisten',A,'Get-SmbShare','Zeigt Freigaben auf dem ausführenden Rechner.',[S('Name','Freigabename (leer = alle)','',OPT)],{out:'Freigaben',module:'SmbShare',keywords:'smb share freigabe anzeigen netzlaufwerk'});
+cmd('newshare','SMB-Freigabe erstellen',A,'New-SmbShare','Erstellt eine Freigabe. NTFS-Rechte müssen zusätzlich passend gesetzt werden.',[S('Name','Freigabename','Projekt'),S('Path','Freigegebener Ordner','C:\\Daten\\Projekt'),S('ChangeAccess','Gruppe mit Änderungsrechten','Projektteam')],{module:'SmbShare',mutates:true,keywords:'smb freigabe erstellen share netzwerkordner'});
+cmd('shareaccess','Freigaberechte lesen',A,'Get-SmbShareAccess','Zeigt die Freigabeberechtigungen einer SMB-Freigabe.',[S('Name','Freigabename','Projekt')],{out:'Freigaberechte',module:'SmbShare',keywords:'freigabe berechtigungen rechte smb lesen'});
+cmd('grantshare','Freigaberechte erteilen',A,'Grant-SmbShareAccess','Erteilt einer Identität Freigaberechte.',[S('Name','Freigabename','Projekt'),S('AccountName','Benutzer / Gruppe','Projektteam'),C('AccessRight','Recht',['Read','Change','Full'],'Change')],{module:'SmbShare',mutates:true,keywords:'freigabe rechte erlauben berechtigung smb'});
+cmd('services','Dienste auflisten',SV,'Get-Service','Liest Windows-Dienste anhand des Dienstnamens oder Musters.',[S('Name','Dienstname / Muster','*')],{out:'Dienste',keywords:'dienst service status anzeigen auflisten'});
+for (const [id,title,command,keys] of [['startservice','Dienst starten','Start-Service','start starten'],['stopservice','Dienst stoppen','Stop-Service','stop stoppen beenden'],['restartservice','Dienst neu starten','Restart-Service','restart neustart starten']]) cmd(id,title,SV,command,'Verwendet den internen Dienstnamen, nicht den Anzeigenamen.',[S('Name','Dienstname','Spooler')],{mutates:true,keywords:`dienst service ${keys}`});
+cmd('setservice','Dienst-Starttyp ändern',SV,'Set-Service','Ändert den Starttyp eines Dienstes.',[S('Name','Dienstname','Spooler'),C('StartupType','Starttyp',['Automatic','Manual','Disabled'],'Automatic')],{mutates:true,keywords:'dienst service autostart starttyp deaktivieren automatisch'});
+cmd('processes','Prozesse auflisten',SV,'Get-Process','Liest laufende Prozesse anhand ihres Namens.',[S('Name','Prozessname / Muster','*')],{out:'Prozesse',keywords:'prozess task cpu ram speicher taskmanager'});
+cmd('stopprocess','Prozess beenden',SV,'Stop-Process','Beendet Prozesse anhand ihres Namens.',[S('Name','Prozessname','notepad'),B('Force','Beenden erzwingen')],{mutates:true,risk:'Nicht gespeicherte Daten können verloren gehen.',keywords:'prozess kill beenden stoppen'});
+cmd('startprocess','Programm starten',SV,'Start-Process','Startet ein Programm mit optionalen Argumenten.',[S('FilePath','Programm','notepad.exe'),S('ArgumentList','Argumente','',OPT),B('Wait','Auf Programmende warten')],{mutates:true,keywords:'programm starten ausführen exe prozess'});
+cmd('ping','Erreichbarkeit prüfen',NET,'Test-Connection','Prüft ICMP-Erreichbarkeit. Ein gesperrtes ICMP ist kein Beweis für einen ausgefallenen Host.',[S('ComputerName','Rechner / IP','server01'),N('Count','Anzahl Anfragen',2,{min:1,max:100}),B('Quiet','Nur True/False ausgeben',true)],{out:'Erreichbar',keywords:'ping erreichbarkeit online offline verbindung host'});
+cmd('port','TCP-Port prüfen',NET,'Test-NetConnection','Prüft eine TCP-Verbindung auf einem bestimmten Port.',[S('ComputerName','Rechner / IP','server01'),N('Port','TCP-Port',445,{min:1,max:65535})],{out:'Porttest',module:'NetTCPIP',keywords:'tcp port firewall verbindung prüfen 445 3389 rdp smb'});
+cmd('dns','DNS-Namen auflösen',NET,'Resolve-DnsName','Fragt DNS-Einträge ab.',[S('Name','DNS-Name','server01.example.local'),C('Type','Eintragstyp',['A','AAAA','MX','TXT','CNAME','PTR'],'A'),S('Server','DNS-Server (optional)','',OPT)],{out:'DnsAntwort',module:'DnsClient',keywords:'dns ip auflösen nslookup name adresse'});
+cmd('ip','IP-Adressen anzeigen',NET,'Get-NetIPAddress','Liest IP-Adressen der Netzwerkadapter.',[C('AddressFamily','Adressfamilie',['IPv4','IPv6'],'IPv4')],{out:'IPAdressen',module:'NetTCPIP',keywords:'ip adresse netzwerk interface adapter ipconfig'});
+cmd('adapters','Netzwerkadapter anzeigen',NET,'Get-NetAdapter','Liest Status und Eigenschaften der Adapter.',[S('Name','Adaptername / Muster','*')],{out:'Adapter',module:'NetAdapter',keywords:'netzwerk karte adapter mac status'});
+cmd('connections','TCP-Verbindungen anzeigen',NET,'Get-NetTCPConnection','Zeigt bestehende TCP-Verbindungen und Listener.',[],{out:'Verbindungen',module:'NetTCPIP',keywords:'netstat tcp verbindung listening port'});
+cmd('firewall','Firewall-Regeln anzeigen',NET,'Get-NetFirewallRule','Liest Regeln anhand ihres Anzeigenamens.',[S('DisplayName','Anzeigename / Muster','*')],{out:'FirewallRegeln',module:'NetSecurity',keywords:'firewall regeln anzeigen port sperre'});
+cmd('firewallnew','Eingehenden TCP-Port erlauben',NET,'New-NetFirewallRule','Erstellt eine eingehende TCP-Regel mit dem gewählten Port.',[S('DisplayName','Regelname','Projekt TCP'),C('Direction','Richtung',['Inbound'],'Inbound'),C('Action','Aktion',['Allow'],'Allow'),C('Protocol','Protokoll',['TCP'],'TCP'),N('LocalPort','Lokaler Port',8443,{min:1,max:65535}),C('Profile','Netzwerkprofil',['Domain','Private','Any'],'Domain')],{mutates:true,module:'NetSecurity',keywords:'firewall öffnen port freigeben tcp inbound'});
+cmd('cim','Systeminformationen abfragen',SYS,'Get-CimInstance','Liest eine Windows-CIM-Klasse, zum Beispiel Betriebssystem, Datenträger oder Hardware.',[C('ClassName','Klasse',['Win32_OperatingSystem','Win32_ComputerSystem','Win32_LogicalDisk','Win32_BIOS','Win32_Processor','Win32_PhysicalMemory','Win32_Service'],'Win32_OperatingSystem'),S('ComputerName','Rechner (leer = lokal)','',OPT)],{out:'Systemdaten',keywords:'system hardware inventar betriebssystem ram disk platte speicher wmi cim'});
+cmd('events','Ereignisprotokoll lesen',SYS,'Get-WinEvent','Liest die neuesten Ereignisse eines Windows-Protokolls.',[C('LogName','Protokoll',['System','Application','Security'],'System'),N('MaxEvents','Maximale Anzahl',100,{min:1,max:100000})],{out:'Ereignisse',keywords:'eventlog ereignisse fehler warnung log protokoll security'});
+cmd('hotfix','Windows-Updates anzeigen',SYS,'Get-HotFix','Liest installierte Hotfixes; die Liste bildet nicht jeden Update-Typ ab.',[],{out:'Updates',keywords:'updates hotfix patch kb windows installiert'});
+cmd('volumes','Laufwerke und freien Platz lesen',SYS,'Get-Volume','Liest Volumes mit Größe und freiem Speicher.',[],{out:'Volumes',module:'Storage',keywords:'platte laufwerk volume speicher frei voll kapazität disk'});
+cmd('disks','Physische Datenträger lesen',SYS,'Get-Disk','Liest angeschlossene Datenträger; verändert keine Partitionen.',[],{out:'Datentraeger',module:'Storage',keywords:'disk datenträger platte ssd hdd partition'});
+cmd('regread','Registry-Werte lesen',SYS,'Get-ItemProperty','Liest Werte eines Registry-Schlüssels.',[S('LiteralPath','Registry-Pfad','HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion')],{out:'RegistryWerte',keywords:'registry regedit schlüssel lesen'});
+cmd('regwrite','Registry-Wert setzen',SYS,'New-ItemProperty','Erstellt oder ersetzt einen Wert in einem vorhandenen Registry-Schlüssel.',[S('LiteralPath','Registry-Pfad','HKCU:\\Software\\PowerHelp'),S('Name','Wertname','Beispiel'),C('PropertyType','Werttyp',['String','ExpandString','DWord','QWord'],'String'),S('Value','Wert','1'),B('Force','Wert ersetzen',true)],{mutates:true,keywords:'registry wert schreiben setzen dword string regedit'});
+cmd('tasks','Geplante Aufgaben auflisten',TASK,'Get-ScheduledTask','Liest Aufgaben aus der Windows-Aufgabenplanung.',[S('TaskName','Aufgabenname / Muster','*')],{out:'Aufgaben',module:'ScheduledTasks',keywords:'task scheduler aufgabenplanung zeitplan geplante aufgaben'});
+cmd('taskinfo','Letzte Ausführung einer Aufgabe lesen',TASK,'Get-ScheduledTaskInfo','Zeigt Laufzeit und Ergebnis einer geplanten Aufgabe.',[S('TaskName','Aufgabenname','PowerHelp-Backup')],{out:'Aufgabenstatus',module:'ScheduledTasks',keywords:'task aufgabe ergebnis status letzte ausführung'});
+cmd('tasknew','Tägliche PowerShell-Aufgabe erstellen',TASK,'Register-ScheduledTask','Registriert eine tägliche Aufgabe für das aktuell angemeldete Konto (interaktive Anmeldung).', [S('name','Aufgabenname','PowerHelp-Backup'),S('script','Skriptpfad','C:\\Skripte\\Backup.ps1'),S('time','Uhrzeit (HH:mm)','18:00')],{kind:'tasknew',module:'ScheduledTasks',mutates:true,keywords:'task aufgabe erstellen täglich automatisch zeitplan scheduler'});
+cmd('taskstart','Geplante Aufgabe starten',TASK,'Start-ScheduledTask','Startet eine vorhandene Aufgabe.',[S('TaskName','Aufgabenname','PowerHelp-Backup')],{module:'ScheduledTasks',mutates:true,keywords:'task aufgabe starten ausführen'});
+cmd('taskdisable','Geplante Aufgabe deaktivieren',TASK,'Disable-ScheduledTask','Deaktiviert eine vorhandene Aufgabe.',[S('TaskName','Aufgabenname','PowerHelp-Backup')],{module:'ScheduledTasks',mutates:true,keywords:'task aufgabe deaktivieren sperren'});
+cmd('adusers','Domänenbenutzer suchen',AD,'Get-ADUser','Benötigt das bereits vorhandene ActiveDirectory-Modul und Zugriff auf einen Domänencontroller.',[S('Filter','AD-Filter','*'),F('Properties','Zusätzliche Eigenschaften','list','DisplayName, Enabled, LastLogonDate'),S('SearchBase','Suchbasis (DN, optional)','',OPT)],{out:'Domaenenbenutzer',module:'ActiveDirectory',keywords:'ad domäne benutzer user active directory ldap suchen'});
+cmd('adgroups','Domänengruppen suchen',AD,'Get-ADGroup','Liest Sicherheits- und Verteilergruppen aus Active Directory.',[S('Filter','AD-Filter','*'),S('SearchBase','Suchbasis (DN, optional)','',OPT)],{out:'Domaenengruppen',module:'ActiveDirectory',keywords:'ad domäne gruppe active directory'});
+cmd('admembers','Domänengruppenmitglieder lesen',AD,'Get-ADGroupMember','Liest Mitglieder einer AD-Gruppe; optional auch verschachtelte Mitgliedschaften.',[S('Identity','Gruppe','Projektteam'),B('Recursive','Verschachtelte Gruppen auflösen')],{out:'ADMitglieder',module:'ActiveDirectory',keywords:'ad gruppe mitglieder verschachtelt domäne'});
+cmd('adadd','Mitglied zur AD-Gruppe hinzufügen',AD,'Add-ADGroupMember','Fügt ein Konto zu einer vorhandenen AD-Gruppe hinzu.',[S('Identity','AD-Gruppe','Projektteam'),S('Members','Konto (sAMAccountName)','max')],{module:'ActiveDirectory',mutates:true,keywords:'ad domäne gruppe mitglied hinzufügen'});
+cmd('adunlock','Domänenkonto entsperren',AD,'Unlock-ADAccount','Entsperrt ein gesperrtes AD-Konto.',[S('Identity','Konto','max')],{module:'ActiveDirectory',mutates:true,keywords:'ad konto entsperren locked benutzer'});
+cmd('addisable','Domänenkonto deaktivieren',AD,'Disable-ADAccount','Deaktiviert ein AD-Konto.',[S('Identity','Konto','max')],{module:'ActiveDirectory',mutates:true,keywords:'ad konto deaktivieren sperren'});
+cmd('adenable','Domänenkonto aktivieren',AD,'Enable-ADAccount','Aktiviert ein AD-Konto.',[S('Identity','Konto','max')],{module:'ActiveDirectory',mutates:true,keywords:'ad konto aktivieren'});
+cmd('adcomputers','Domänencomputer suchen',AD,'Get-ADComputer','Liest Rechnerobjekte aus Active Directory.',[S('Filter','AD-Filter','*'),F('Properties','Eigenschaften','list','OperatingSystem, LastLogonDate')],{out:'Domaenencomputer',module:'ActiveDirectory',keywords:'ad computer rechner inventar domäne'});
+cmd('adlocked','Gesperrte Domänenkonten suchen',AD,'Search-ADAccount','Liest gesperrte Benutzerkonten.',[B('LockedOut','Gesperrte Konten',true),B('UsersOnly','Nur Benutzer',true)],{out:'GesperrteKonten',module:'ActiveDirectory',keywords:'ad gesperrt locked konten benutzer finden'});
+cmd('variable','Variable definieren',LOGIC,'$Variable = ...','Legt einen Wert für spätere Schritte fest. Der Wert ist ein PowerShell-Ausdruck.',[E('value','Wert als PowerShell-Ausdruck',"'C:\\Daten'")],{kind:'variable',out:'Quellordner',keywords:'variable wert parameter definieren pfad'});
+cmd('foreach','Für jedes Element wiederholen',LOGIC,'foreach','Führt untergeordnete Schritte für jedes Objekt einer vorhandenen Variable aus.',[V('input','Liste / Datenvariable','Dateien'),V('item','Name des aktuellen Elements','Datei')],{kind:'foreach',uses:['input'],container:true,keywords:'schleife foreach jedes wiederholen massen batch'});
+cmd('if','Bedingung',LOGIC,'if','Führt untergeordnete Schritte aus, wenn der Ausdruck True ergibt.',[E('condition','Bedingung',"Test-Path -LiteralPath 'C:\\Daten'")],{kind:'if',container:true,keywords:'wenn bedingung if prüfen existiert'});
+cmd('try','Fehler behandeln',LOGIC,'try / catch','Führt untergeordnete Schritte aus; catch meldet einen Fehler und wirft ihn erneut.',[],{kind:'try',container:true,keywords:'fehlerbehandlung try catch exception robust'});
+cmd('function','Eigene Funktion definieren',LOGIC,'function','Definiert eine wiederverwendbare Funktion mit optionalen Parametern.',[S('name','Funktionsname','Get-Projektbericht'),E('params','Parameterdeklarationen','',OPT)],{kind:'function',container:true,keywords:'funktion function wiederverwenden parameter'});
+cmd('message','Meldung ausgeben',LOGIC,'Write-Host','Schreibt eine verständliche Fortschrittsmeldung in die Konsole.',[S('Object','Meldung','Schritt abgeschlossen')],{keywords:'meldung ausgabe schreiben status fortschritt'});
+cmd('sleep','Warten',LOGIC,'Start-Sleep','Pausiert die Skriptausführung für eine feste Zeit.',[N('Seconds','Sekunden',2,{min:0,max:86400})],{keywords:'warten pause sleep verzögerung'});
+cmd('custom','Eigener PowerShell-Code',LOGIC,'Eigener Code','Erweitert das Skript mit beliebigem PowerShell-Code. Eigene Befehle und Ausdrücke bleiben sichtbar.',[E('code','PowerShell-Code',"Get-Date"),C('effect','Wirkung',['Nur lesen','Änderung'],'Nur lesen')],{kind:'custom',keywords:'frei code befehl eigene skript alles editor erweitern'});
 
-  function add(type, values={}) {
-    state.push({id:nextId++, type, values:{...values}});
-    render();
+cmd('lines','Bestimmte Zeilen aus Dateien extrahieren',T,'Get-Content / Zeilenindex','Liest 1-basierte Zeilennummern aus vielen Textdateien und ergänzt den Quelldateinamen.',[S('folder','Suchordner','C:\\Daten'),S('filter','Dateimuster','*.txt'),S('lines','Zeilennummern (Komma getrennt)','4, 9'),C('encoding','Zeichenkodierung',['UTF8','Default','Unicode','ASCII'],'Default')],{kind:'lines',out:'Zeilendaten',keywords:'zeile zeilen vier neunte extrahieren txt dateien serienbrief nummer'});
+cmd('localpassword','Kennwort eines lokalen Kontos ändern',U,'Set-LocalUser','Fragt das neue Kennwort erst bei der Skriptausführung verdeckt ab.',[S('Name','Benutzername','Max')],{kind:'localpassword',mutates:true,module:'Microsoft.PowerShell.LocalAccounts',keywords:'passwort kennwort reset benutzer lokal ändern'});
+cmd('deletegroup','Lokale Gruppe entfernen',U,'Remove-LocalGroup','Entfernt eine lokale Gruppe; ihre Benutzerkonten bleiben erhalten.',[S('Name','Gruppenname','Projektteam')],{mutates:true,module:'Microsoft.PowerShell.LocalAccounts',risk:'Entfernt die lokale Gruppe und ihre Mitgliedschaften.',keywords:'gruppe löschen entfernen'});
+cmd('delfreigabe','SMB-Freigabe entfernen',A,'Remove-SmbShare','Entfernt eine Freigabe. Der Ordnerinhalt wird nicht gelöscht.',[S('Name','Freigabename','Projekt')],{module:'SmbShare',mutates:true,keywords:'freigabe smb löschen entfernen'});
+cmd('eventfilter','Ereignisse nach Zeitraum und Stufe suchen',SYS,'Get-WinEvent -FilterHashtable','Filtert direkt bei der Abfrage nach Protokoll, Ereignisstufe und Alter.',[C('log','Protokoll',['System','Application','Security'],'System'),C('level','Stufe',['1','2','3','4'],'2'),N('days','Letzte Tage',7,{min:1,max:3650})],{kind:'eventfilter',out:'GefilterteEreignisse',keywords:'eventlog fehler warnungen ereignisse datum zeitraum'});
+cmd('remoting','Code auf einem anderen Server ausführen',SYS,'Invoke-Command','Verwendet vorhandenes PowerShell-Remoting/WinRM im internen Netzwerk. Der Code läuft auf dem Zielrechner.',[S('ComputerName','Zielserver','server01'),E('ScriptBlock','PowerShell-Code auf dem Zielserver','Get-Service'),C('effect','Wirkung',['Nur lesen','Änderung'],'Nur lesen')],{kind:'remoting',out:'RemoteErgebnis',keywords:'remote remoting server winrm fernsteuerung invoke command'});
+cmd('taskremove','Geplante Aufgabe entfernen',TASK,'Unregister-ScheduledTask','Entfernt die Definition einer geplanten Aufgabe.',[S('TaskName','Aufgabenname','PowerHelp-Backup')],{module:'ScheduledTasks',mutates:true,keywords:'task aufgabe löschen entfernen scheduler'});
+cmd('adnewuser','Domänenbenutzer anlegen',AD,'New-ADUser','Erstellt ein AD-Konto; das Kennwort wird erst beim Ausführen verdeckt abgefragt.',[S('Name','Anzeigename','Max Beispiel'),S('SamAccountName','sAMAccountName','max'),S('UserPrincipalName','UPN','max@example.local'),S('Path','OU-Pfad (DN)','OU=Benutzer,DC=example,DC=local'),B('Enabled','Konto aktivieren',true)],{kind:'adnewuser',module:'ActiveDirectory',mutates:true,keywords:'ad benutzer erstellen konto neu domäne'});
+cmd('adsetuser','Domänenbenutzer ändern',AD,'Set-ADUser','Ändert Beschreibung und Abteilung eines vorhandenen AD-Kontos.',[S('Identity','Konto','max'),S('Description','Beschreibung','Projektkonto'),S('Department','Abteilung','IT')],{module:'ActiveDirectory',mutates:true,keywords:'ad benutzer ändern abteilung beschreibung'});
+cmd('adpassword','Domänenkennwort zurücksetzen',AD,'Set-ADAccountPassword','Fragt das neue Kennwort erst bei der Skriptausführung verdeckt ab.',[S('Identity','Konto','max')],{kind:'adpassword',module:'ActiveDirectory',mutates:true,keywords:'ad passwort kennwort reset zurücksetzen'});
+cmd('adnewgroup','Domänengruppe anlegen',AD,'New-ADGroup','Erstellt eine AD-Gruppe in einer vorhandenen Organisationseinheit.',[S('Name','Gruppenname','Projektteam'),C('GroupScope','Gruppenbereich',['Global','DomainLocal','Universal'],'Global'),C('GroupCategory','Gruppentyp',['Security','Distribution'],'Security'),S('Path','OU-Pfad (DN)','OU=Gruppen,DC=example,DC=local')],{module:'ActiveDirectory',mutates:true,keywords:'ad gruppe neu anlegen domäne'});
+cmd('adremovemember','Mitglied aus AD-Gruppe entfernen',AD,'Remove-ADGroupMember','Entfernt eine AD-Gruppenmitgliedschaft.',[S('Identity','Gruppe','Projektteam'),S('Members','Konto','max')],{module:'ActiveDirectory',mutates:true,keywords:'ad gruppe mitglied entfernen'});
+cmd('adous','Organisationseinheiten auflisten',AD,'Get-ADOrganizationalUnit','Liest Organisationseinheiten und ihre Distinguished Names.',[S('Filter','AD-Filter','*')],{module:'ActiveDirectory',out:'Organisationseinheiten',keywords:'ad ou organisationseinheit dn domäne'});
+cmd('admove','AD-Objekt in eine OU verschieben',AD,'Move-ADObject','Verschiebt ein Objekt anhand seines Distinguished Name in eine Ziel-OU.',[S('Identity','Objekt-DN','CN=Max Beispiel,OU=Alt,DC=example,DC=local'),S('TargetPath','Ziel-OU-DN','OU=Benutzer,DC=example,DC=local')],{module:'ActiveDirectory',mutates:true,keywords:'ad ou verschieben konto computer'});
+
+const PH_BY_ID = Object.fromEntries(PH_COMMANDS.map(d=>[d.id,d]));
+function step(def,values={},out,children=[]) { return {def,values,out,children}; }
+const PH_TEMPLATES = [
+ {id:'regex-report',title:'Daten aus Textdateien extrahieren',description:'Kundennummern mit Regex sammeln und mit Quelldatei als CSV exportieren.',keywords:'regex daten auslesen extrahieren kundennummer text txt report',steps:[step('mkdir',{Path:'C:\\Daten\\Export'}),step('regex',{},'Treffer'),step('csvout',{},null)]},
+ {id:'old-files',title:'Alte Dateien finden und entfernen',description:'Findet Dateien älter als 90 Tage. Der Vorschau-Modus überspringt das Löschen.',keywords:'alte dateien löschen aufräumen bereinigen älter temp',steps:[step('files',{LiteralPath:'C:\\Temp',Filter:'*',Recurse:true},'Dateien'),step('where',{input:'Dateien',condition:'$_.LastWriteTime -lt (Get-Date).AddDays(-90)'},'AlteDateien'),step('foreach',{input:'AlteDateien',item:'Datei'},null,[step('remove',{LiteralPath:{expr:'$Datei.FullName'}})])]},
+ {id:'backup',title:'Ordner mit Robocopy sichern',description:'Kopiert einen Ordner inklusive Unterordnern und prüft den Robocopy-Exitcode.',keywords:'backup sicherung kopieren robocopy unterordner daten',steps:[step('mkdir',{Path:'D:\\Backup'}),step('robocopy',{})]},
+ {id:'file-report',title:'Dateibestand als CSV inventarisieren',description:'Dateiname, Pfad, Größe und Änderungsdatum ausgeben.',keywords:'dateiliste inventar dateibestand excel csv größe',steps:[step('files',{Filter:'*',Recurse:true},'Dateien'),step('select',{input:'Dateien'},'Bericht'),step('mkdir',{Path:'C:\\Daten\\Export'}),step('csvout',{input:'Bericht'})]},
+ {id:'users-report',title:'Lokale Benutzer dokumentieren',description:'Konten mit Aktivstatus und Beschreibung als CSV speichern.',keywords:'benutzer report user konten dokumentieren csv',steps:[step('users',{},'Benutzer'),step('select',{input:'Benutzer',Property:'Name, Enabled, Description'},'Bericht'),step('mkdir',{Path:'C:\\Daten\\Export'}),step('csvout',{input:'Bericht'})]},
+ {id:'new-account',title:'Benutzer und Gruppe anlegen',description:'Lokale Gruppe und Konto erstellen, dann die Mitgliedschaft zuweisen.',keywords:'benutzer gruppe neu anlegen konto passwort',steps:[step('newgroup',{}),step('newuser',{}),step('addmember',{})]},
+ {id:'csv-users',title:'Benutzer aus CSV anlegen',description:'Importiert Name, FullName und Description. Das Kennwort wird je Konto verdeckt abgefragt.',keywords:'benutzer csv massenimport import konto batch',steps:[step('csvin',{},'Datensaetze'),step('foreach',{input:'Datensaetze',item:'Datensatz'},null,[step('newuser',{Name:{expr:'$Datensatz.Name'},FullName:{expr:'$Datensatz.FullName'},Description:{expr:'$Datensatz.Description'}})])]},
+ {id:'share-project',title:'Projektordner und Freigabe einrichten',description:'Lokale Gruppe, Ordner, NTFS-Rechte und SMB-Freigabe zusammenstellen.',keywords:'projekt freigabe smb ntfs rechte berechtigungen ordner',steps:[step('newgroup',{}),step('mkdir',{Path:'C:\\Daten\\Projekt'}),step('grant',{path:'C:\\Daten\\Projekt'}),step('newshare',{})]},
+ {id:'services-stopped',title:'Gestoppte automatische Dienste finden',description:'CIM-Dienstobjekte nach Starttyp und Status filtern.',keywords:'dienste gestoppt automatisch service prüfen diagnose',steps:[step('cim',{ClassName:'Win32_Service'},'Dienste'),step('where',{input:'Dienste',condition:"$_.StartMode -eq 'Auto' -and $_.State -ne 'Running'"},'GestoppteDienste'),step('table',{input:'GestoppteDienste',Property:'Name, DisplayName, State, StartMode'})]},
+ {id:'disk-space',title:'Freien Speicherplatz dokumentieren',description:'Volumes mit Kapazität und freiem Speicher als CSV exportieren.',keywords:'platte voll frei laufwerk speicher disk volumen kapazität',steps:[step('volumes',{},'Volumes'),step('select',{input:'Volumes',Property:'DriveLetter, FileSystemLabel, Size, SizeRemaining'},'Bericht'),step('mkdir',{Path:'C:\\Daten\\Export'}),step('csvout',{input:'Bericht'})]},
+ {id:'event-report',title:'Systemfehler aus Ereignisprotokoll lesen',description:'Die letzten 1000 Systemereignisse nach Fehlerstufe filtern und exportieren.',keywords:'eventlog fehler ereignisse protokoll system report',steps:[step('events',{MaxEvents:1000},'Ereignisse'),step('where',{input:'Ereignisse',condition:'$_.Level -eq 2'},'Fehler'),step('select',{input:'Fehler',Property:'TimeCreated, Id, ProviderName, Message'},'Bericht'),step('mkdir',{Path:'C:\\Daten\\Export'}),step('csvout',{input:'Bericht'})]},
+ {id:'ad-disabled',title:'Deaktivierte Domänenkonten dokumentieren',description:'Benötigt das bereits vorhandene ActiveDirectory-Modul.',keywords:'ad deaktivierte benutzer konten domäne csv report',steps:[step('adusers',{Filter:'Enabled -eq $false'},'Domaenenbenutzer'),step('select',{input:'Domaenenbenutzer',Property:'SamAccountName, DisplayName, Enabled, LastLogonDate'},'Bericht'),step('mkdir',{Path:'C:\\Daten\\Export'}),step('csvout',{input:'Bericht'})]},
+ {id:'tcp-test',title:'Server auf SMB-Erreichbarkeit prüfen',description:'Host und TCP-Port 445 prüfen. Beide Ergebnisse erscheinen als Variablen.',keywords:'server verbindung smb erreichbar netzwerk port ping diagnose',steps:[step('ping',{},'Erreichbar'),step('port',{},'Porttest'),step('table',{input:'Porttest',Property:'ComputerName, RemoteAddress, RemotePort, TcpTestSucceeded'})]},
+ {id:'replace-files',title:'Text in Dateien mit Regex ersetzen',description:'Liest jede Datei, ersetzt Treffer und schreibt UTF-8 zurück.',keywords:'regex ersetzen text dateien bereinigen replace mehrere',steps:[step('files',{},'Dateien'),step('foreach',{input:'Dateien',item:'Datei'},null,[step('read',{LiteralPath:{expr:'$Datei.FullName'}},'Text'),step('replace',{},'BereinigterText'),step('write',{LiteralPath:{expr:'$Datei.FullName'},Value:{expr:'$BereinigterText'}})])]},
+ {id:'schedule-backup',title:'Skript täglich planen',description:'Registriert ein vorhandenes Skript als tägliche Aufgabe für die interaktive Anmeldung.',keywords:'task aufgabe täglich zeitplan powershell automatisch',steps:[step('tasknew',{})]}
+];
+
+/* Pure search, validation and generation; no DOM or networking. */
+const PHCore = (()=>{
+ const q = s=>"'"+String(s).replace(/'/g,"''")+"'";
+ const name = s=>String(s??'').replace(/^\$/,'');
+ const validName = s=>/^[A-Za-z_][A-Za-z0-9_]*$/.test(name(s));
+ const clone = o=>JSON.parse(JSON.stringify(o));
+ let counter=0;
+ function makeNode(id,values={},out,children=[]) {
+  const d=PH_BY_ID[id]; if(!d) throw new Error('Unbekannter Baustein: '+id);
+  return {uid:'s'+Date.now().toString(36)+(++counter),def:id,values:Object.fromEntries(d.fields.map(f=>[f.key,values[f.key]===undefined?clone(f.value):clone(values[f.key])])),out:out===undefined?(d.out||''):out,children:children.map(s=>makeNode(s.def,s.values,s.out,s.children))};
+ }
+ const isExpr = v=>v!==null&&typeof v==='object'&&typeof v.expr==='string';
+ const valueText = v=>isExpr(v)?v.expr:String(v??'');
+ function val(f,v){
+  if(isExpr(v))return '('+v.expr.trim()+')';
+  if(f.type==='expr')return String(v??'').trim();
+  if(f.type==='var')return '$'+name(v);
+  if(f.type==='number')return String(Number(v));
+  if(f.type==='bool')return v?'$true':'$false';
+  if(f.type==='list')return String(v).split(',').map(x=>x.trim()).filter(Boolean).map(q).join(', ');
+  if(f.key==='Delimiter') return v==='TAB'?"\"`t\"":q(String(v).trim());
+  return q(v);
+ }
+ function field(d,n,key) { const f=d.fields.find(f=>f.key===key);return val(f,n.values[key]); }
+ const indent = (s,n=1)=>s.split('\n').map(l=>'    '.repeat(n)+l).join('\n');
+ function command(n,d){
+  const v=n.values, get=k=>field(d,n,k), out=n.out?'$'+name(n.out):'';
+  let code;
+  if(d.kind==='regex') code=`@(foreach ($PHDatei in Get-ChildItem -LiteralPath ${get('folder')} -Filter ${get('filter')} -File${v.recurse?' -Recurse':''} -ErrorAction Stop) {\n    $PHText = [string](Get-Content -LiteralPath $PHDatei.FullName -Raw -Encoding ${get('encoding')} -ErrorAction Stop)\n    foreach ($PHMatch in [regex]::Matches($PHText, ${get('pattern')})) {\n        $PHGruppe = $PHMatch.Groups[${/^\d+$/.test(v.group)?Number(v.group):q(v.group)}]\n        if ($PHGruppe.Success) {\n            [pscustomobject]@{ Datei = $PHDatei.FullName; Wert = $PHGruppe.Value; Position = $PHMatch.Index }\n        }\n    }\n})`;
+  else if(d.kind==='lines') code=`@(foreach ($PHDatei in Get-ChildItem -LiteralPath ${get('folder')} -Filter ${get('filter')} -File -ErrorAction Stop) {\n    $PHZeilen = @(Get-Content -LiteralPath $PHDatei.FullName -Encoding ${get('encoding')} -ErrorAction Stop)\n    foreach ($PHNummer in @(${String(v.lines).split(',').map(x=>Number(x.trim())).join(', ')})) {\n        if ($PHNummer -le $PHZeilen.Count) {\n            [pscustomobject]@{ Datei = $PHDatei.FullName; Zeile = $PHNummer; Wert = $PHZeilen[$PHNummer - 1] }\n        }\n    }\n})`;
+  else if(d.kind==='eventfilter') code=`Get-WinEvent -FilterHashtable @{ LogName = ${get('log')}; Level = ${v.level}; StartTime = (Get-Date).AddDays(-${get('days')}) } -ErrorAction Stop`;
+  else if(d.kind==='remoting') code=`Invoke-Command -ComputerName ${get('ComputerName')} -ScriptBlock {\n${indent(v.ScriptBlock)}\n} -ErrorAction Stop`;
+  else if(d.kind==='localpassword')return `$PHKennwort = Read-Host 'Neues Kennwort' -AsSecureString\nSet-LocalUser -Name ${get('Name')} -Password $PHKennwort -ErrorAction Stop`;
+  else if(d.kind==='adpassword')return `$PHKennwort = Read-Host 'Neues Domänenkennwort' -AsSecureString\nSet-ADAccountPassword -Identity ${get('Identity')} -NewPassword $PHKennwort -Reset -ErrorAction Stop`;
+  else if(d.kind==='adnewuser')return `$PHKennwort = Read-Host 'Kennwort für das neue Domänenkonto' -AsSecureString\nNew-ADUser -Name ${get('Name')} -SamAccountName ${get('SamAccountName')} -UserPrincipalName ${get('UserPrincipalName')} -Path ${get('Path')} -AccountPassword $PHKennwort -Enabled ${v.Enabled?'$true':'$false'} -ErrorAction Stop`;
+  else if(d.kind==='where')code=`${get('input')} | Where-Object { ${get('condition')} }`;
+  else if(d.kind==='replace')code=`${get('input')} -replace ${get('pattern')}, ${get('replacement')}`;
+  else if(d.kind==='split')code=`${get('input')} -split ${get('pattern')}`;
+  else if(d.kind==='variable')return `${out} = ${get('value')}`;
+  else if(d.kind==='custom')return v.code;
+  else if(d.kind==='newuser')return `$PHKennwort = Read-Host ${q('Kennwort für das neue Konto')} -AsSecureString\nNew-LocalUser -Name ${get('Name')} -FullName ${get('FullName')}${v.Description?' -Description '+get('Description'):''} -Password $PHKennwort${v.PasswordNeverExpires?' -PasswordNeverExpires':''} -ErrorAction Stop | Out-Null`;
+  else if(d.kind==='robocopy')return `& robocopy.exe ${get('source')} ${get('target')} ${v.mirror?'/MIR':v.recurse?'/E':''} /COPY:DAT /DCOPY:DAT /R:${get('retries')} /W:${get('wait')}\nif ($LASTEXITCODE -ge 8) { throw "Robocopy fehlgeschlagen: Exitcode $LASTEXITCODE" }`;
+  else if(d.kind==='aclgrant')return `$PHAcl = Get-Acl -LiteralPath ${get('path')} -ErrorAction Stop\n$PHRegel = New-Object System.Security.AccessControl.FileSystemAccessRule(${get('identity')}, ${get('rights')}, ${q(v.inherit?'ContainerInherit, ObjectInherit':'None')}, 'None', 'Allow')\n$PHAcl.AddAccessRule($PHRegel)\nSet-Acl -LiteralPath ${get('path')} -AclObject $PHAcl -ErrorAction Stop`;
+  else if(d.kind==='tasknew')return `$PHAktion = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument ${q('-NoProfile -File "'+String(v.script).replace(/"/g,'')+'"')}\n$PHTrigger = New-ScheduledTaskTrigger -Daily -At ${get('time')}\n$PHIdentitaet = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name\n$PHPrincipal = New-ScheduledTaskPrincipal -UserId $PHIdentitaet -LogonType Interactive -RunLevel Limited\nRegister-ScheduledTask -TaskName ${get('name')} -Action $PHAktion -Trigger $PHTrigger -Principal $PHPrincipal -ErrorAction Stop | Out-Null`;
+  else {
+   let args=[];
+   for(const f of d.fields){
+    if(f.key===d.inputField)continue;
+    const value=v[f.key];
+    if(f.optional && (value===''||value===undefined))continue;
+    if(f.type==='bool'){ if(value)args.push('-'+f.key); }
+    else args.push('-'+f.key+' '+val(f,value));
+   }
+   code=(d.inputField?get(d.inputField)+' | ':'')+d.command+(args.length?' '+args.join(' '):'')+' -ErrorAction Stop';
+   if(d.id==='mkdir')code+=' | Out-Null';
   }
-  function renderCatalog() {
-    for (const [type, d] of Object.entries(defs)) {
-      const btn=document.createElement('button'); btn.type='button';
-      const strong=document.createElement('strong'); strong.textContent=d.title;
-      const small=document.createElement('small'); small.textContent=d.detail;
-      btn.append(strong,small); btn.addEventListener('click',()=>add(type));
-      $('catalog').append(btn);
+  return out?out+' = '+code:code;
+ }
+ function allNodes(steps){return steps.flatMap(n=>[n,...allNodes(n.children||[])]);}
+ function compile(project){
+  const errors=[],warnings=[],modules=new Set(), defined=new Set(['true','false','null','_','PSItem','PSCmdlet','WhatIfPreference','ErrorActionPreference','LASTEXITCODE','args','input','PSBoundParameters','PSScriptRoot','PSCommandPath']);
+  const settings=project.settings||{};
+  const parameters=String(settings.params||'').trim();
+  for(const match of parameters.matchAll(/\$([A-Za-z_][\w]*)/g))defined.add(match[1]);
+  const has= (set,v)=>[...set].some(x=>x.toLowerCase()===name(v).toLowerCase());
+  function analyze(nodes,scope,conditional=false){
+   for(const n of nodes){
+    const d=Object.hasOwn(PH_BY_ID,n.def)?PH_BY_ID[n.def]:null; if(!d){errors.push({uid:n.uid,text:'Unbekannter Baustein.'});continue;}
+    if(d.module)modules.add(d.module);
+    for(const f of d.fields){
+     const v=n.values[f.key],txt=valueText(v);
+     if(f.type!=='bool'&&!f.optional&&!f.allowEmpty&&!txt.trim())errors.push({uid:n.uid,text:`${d.title}: „${f.label}“ fehlt.`});
+     if(!['expr'].includes(f.type)&&!isExpr(v)&&/[\r\n\u0000]/.test(txt))errors.push({uid:n.uid,text:`${d.title}: Zeilenumbrüche sind in „${f.label}“ nicht erlaubt. Für Code den Ausdruck-Modus verwenden.`});
+     if(f.type==='var'&&!validName(v))errors.push({uid:n.uid,text:`${d.title}: Ungültiger Variablenname in „${f.label}“.`});
+     if(f.type==='number'&&!isExpr(v)&&(!Number.isFinite(Number(v))||!Number.isInteger(Number(v))||Number(v)<(f.min??0)||Number(v)>(f.max??1000000)))errors.push({uid:n.uid,text:`${d.title}: „${f.label}“ liegt außerhalb des erlaubten Bereichs.`});
+     if(f.type==='enum'&&!f.options.includes(v))errors.push({uid:n.uid,text:`${d.title}: Ungültige Auswahl für „${f.label}“.`});
+     if(isExpr(v)||f.type==='expr'){
+      for(const m of txt.matchAll(/\$([A-Za-z_][\w]*)(?=[^:\w]|$)/g))if(!has(scope,m[1])&&!/^(env|global|script|local)$/i.test(m[1]))warnings.push({uid:n.uid,text:`${d.title}: $${m[1]} ist hier nicht als Ausgabe oder Parameter bekannt. Prüfe den Ausdruck.`});
+     }
     }
+    for(const key of d.uses||[]) if(validName(n.values[key])&&!has(scope,n.values[key]))errors.push({uid:n.uid,text:`${d.title}: $${name(n.values[key])} wird vorher nicht erzeugt. Füge einen Quellschritt davor ein oder nutze eine vorhandene Variable.`});
+    if(d.out && !validName(n.out))errors.push({uid:n.uid,text:`${d.title}: Ein gültiger Ausgabename ist erforderlich.`});
+    if(n.out&&/^PH/i.test(name(n.out)))errors.push({uid:n.uid,text:'Variablennamen mit PH am Anfang sind für interne Hilfsvariablen reserviert.'});
+    if(['copy','move'].includes(d.id)&&!isExpr(n.values.LiteralPath)&&!isExpr(n.values.Destination)&&String(n.values.LiteralPath).toLowerCase()===String(n.values.Destination).toLowerCase())errors.push({uid:n.uid,text:`${d.title}: Quelle und Ziel sind identisch.`});
+    if(d.id==='files'&&n.values.File&&n.values.Directory)errors.push({uid:n.uid,text:'Dateisuche: „Nur Dateien“ und „Nur Ordner“ schließen sich aus.'});
+    if(d.kind==='lines'&&!/^\s*[1-9]\d{0,5}(?:\s*,\s*[1-9]\d{0,5})*\s*$/.test(n.values.lines))errors.push({uid:n.uid,text:'Zeilenextraktion: Positive Zeilennummern wie 4, 9 angeben.'});
+    if(d.kind==='regex'&&!/^(?:0|[1-9]\d{0,3}|[A-Za-z_][A-Za-z0-9_]*)$/.test(n.values.group))errors.push({uid:n.uid,text:'Regex: Gruppe muss eine Zahl oder ein Gruppenname sein.'});
+    if(d.kind==='tasknew'&&!/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(n.values.time))errors.push({uid:n.uid,text:'Aufgabenplanung: Uhrzeit im Format HH:mm zwischen 00:00 und 23:59 angeben.'});
+    if(d.kind==='tasknew'&&/["\r\n]/.test(n.values.script))errors.push({uid:n.uid,text:'Aufgabenplanung: Skriptpfad enthält ein ungültiges Zeichen.'});
+    if(d.id==='regwrite'&&['DWord','QWord'].includes(n.values.PropertyType)&&!isExpr(n.values.Value)&&!/^\d+$/.test(n.values.Value))errors.push({uid:n.uid,text:'Registry: Für DWord/QWord einen nicht negativen ganzzahligen Wert angeben.'});
+    if(d.risk)warnings.push({uid:n.uid,text:d.title+': '+d.risk});
+    if(d.kind==='robocopy'&&n.values.mirror)warnings.push({uid:n.uid,text:'Robocopy /MIR entfernt zusätzliche Dateien im Ziel. Quell- und Zielpfad sorgfältig prüfen.'});
+    if(d.kind==='custom')warnings.push({uid:n.uid,text:'Eigener Code: Syntax und Seiteneffekte lassen sich im Browser nicht vollständig prüfen. Die Einstellung „Wirkung“ bestimmt den Vorschau-Schutz.'});
+    if(d.container){
+     const inner=new Set(scope);
+     if(d.kind==='foreach') {inner.add(name(n.values.item));if(/^PH/i.test(name(n.values.item)))errors.push({uid:n.uid,text:'Schleifenvariable darf nicht mit PH beginnen.'});}
+     if(d.kind==='function'){
+      if(!/^[A-Za-z_][A-Za-z0-9_-]*$/.test(n.values.name))errors.push({uid:n.uid,text:'Ungültiger Funktionsname.'});
+      for(const m of String(n.values.params).matchAll(/\$([A-Za-z_][\w]*)/g))inner.add(m[1]);
+     }
+     analyze(n.children||[],inner,true);
+     if(!n.children?.length)warnings.push({uid:n.uid,text:d.title+': Der Block enthält noch keine Schritte.'});
+    }
+    if(n.out){if(has(scope,n.out))warnings.push({uid:n.uid,text:`$${name(n.out)} wird erneut zugewiesen und ersetzt das vorherige Ergebnis.`});scope.add(name(n.out));}
+   }
   }
-  function renderSteps() {
-    const root=$('steps'); root.replaceChildren();
-    if (!state.length) { const empty=document.createElement('div'); empty.className='empty'; empty.textContent='Noch kein Ablauf. Wähle links einen Baustein oder lade den Beispielablauf.'; root.append(empty); return; }
-    state.forEach((step,index)=>{
-      const d=defs[step.type], card=document.createElement('article'); card.className='step';
-      const head=document.createElement('div'); head.className='stephead';
-      const title=document.createElement('h3'); title.textContent=`${index+1}. ${d.title}`;
-      const actions=document.createElement('div'); actions.className='actions';
-      for (const [label,delta] of [['↑',-1],['↓',1]]) {
-        const btn=document.createElement('button'); btn.type='button'; btn.textContent=label;
-        btn.setAttribute('aria-label',`${d.title} ${delta<0?'nach oben':'nach unten'}`);
-        btn.disabled=index+delta<0 || index+delta>=state.length;
-        btn.onclick=()=>{ [state[index],state[index+delta]]=[state[index+delta],state[index]]; render(); };
-        actions.append(btn);
-      }
-      const remove=document.createElement('button'); remove.type='button'; remove.textContent='Entfernen';
-      remove.onclick=()=>{state.splice(index,1);render()}; actions.append(remove);
-      head.append(title,actions); card.append(head);
-      if (d.fields.length) {
-        const fields=document.createElement('div'); fields.className='fields';
-        for (const [key,labelText,hint] of d.fields) {
-          const label=document.createElement('label'); label.textContent=labelText;
-          const input=document.createElement('input'); input.type='text'; input.placeholder=hint;
-          input.value=step.values[key]??''; input.autocomplete='off';
-          input.addEventListener('input',()=>{step.values[key]=input.value;updatePreview()});
-          label.append(input); fields.append(label);
-        }
-        card.append(fields);
-      }
-      root.append(card);
-    });
+  const ordered=allNodes(project.steps||[]);
+  for(let i=0;i<ordered.length;i++){
+   const n=ordered[i];
+   if(n.def==='addmember'&&!isExpr(n.values.Group)){
+    const group=String(n.values.Group).toLowerCase();
+    if(ordered.slice(i+1).some(l=>l.def==='newgroup'&&!isExpr(l.values.Name)&&String(l.values.Name).toLowerCase()===group))errors.push({uid:n.uid,text:'Gruppenmitgliedschaft: Die Gruppe wird erst später angelegt. Den Gruppen-Schritt davor verschieben.'});
+   }
   }
-  function build() {
-    const errors=[], warnings=[], lines=[
-      '# Erstellt mit dem Offline-PowerShell-Baukasten (Prototyp)',
-      '# Ziel: Windows PowerShell 5.1; lokale Konten/Gruppen benötigen das LocalAccounts-Modul.',
-      "$ErrorActionPreference = 'Stop'",''
-    ];
-    let seenFiles=false, seenRegex=false;
-    const knownGroups=new Set();
-    state.forEach((step,index)=>{
-      const d=defs[step.type], v={}, number=index+1;
-      for (const [key,label] of d.fields) {
-        v[key]=(step.values[key]??'').trim();
-        if (!v[key]) errors.push(`Schritt ${number}: „${label}“ fehlt.`);
-        else if (badInput(v[key])) errors.push(`Schritt ${number}: „${label}“ enthält einen Zeilenumbruch oder ein Steuerzeichen.`);
-      }
-      if (step.type==='export' && !seenFiles) errors.push(`Schritt ${number}: „Dateien suchen“ muss vor dem CSV-Export stehen.`);
-      if (step.type==='files') seenFiles=true;
-      if (step.type==='exportRegex' && !seenRegex) errors.push(`Schritt ${number}: „Regex aus Textdateien“ muss vor dem Treffer-Export stehen.`);
-      if (step.type==='regex') {
-        seenRegex=true;
-        if (v.group && !/^(?:0|[1-9]\d{0,3}|[A-Za-z_][A-Za-z_0-9]*)$/.test(v.group))
-          errors.push(`Schritt ${number}: Die Regex-Gruppe muss eine Zahl oder ein Gruppenname sein.`);
-        warnings.push(`Schritt ${number}: Die Dateien werden als UTF-8 gelesen. Die Regex-Syntax wird erst durch PowerShell beim Ausführen geprüft.`);
-      }
-      if (step.type==='addmember' && v.group && !knownGroups.has(v.group.toLocaleLowerCase('de-DE')))
-        warnings.push(`Schritt ${number}: Die Gruppe „${v.group}“ muss bereits existieren oder vorher angelegt werden.`);
-      if (step.type==='newgroup' && v.group) knownGroups.add(v.group.toLocaleLowerCase('de-DE'));
-      if (['copy','move'].includes(step.type) && v.source && v.target && v.source.toLowerCase()===v.target.toLowerCase())
-        errors.push(`Schritt ${number}: Quelle und Ziel sind identisch.`);
-      if (Object.values(v).some(value=>!value || badInput(value))) {
-        lines.push(`# Schritt ${number}: ${d.title} – Eingaben fehlen oder sind ungültig.`,'');
-      } else {
-        lines.push(`# Schritt ${number}: ${d.title}`,d.code(v),'');
-      }
-    });
-    if (!state.length) warnings.push('Füge einen Baustein hinzu, um Code zu erzeugen.');
-    if (state.some(step=>['users','groups','newgroup','addmember'].includes(step.type)))
-      warnings.push('Lokale Benutzer und Gruppen beziehen sich auf den Rechner, auf dem das Skript später läuft. Das LocalAccounts-Modul ist in der 32-Bit-PowerShell auf einem 64-Bit-System nicht verfügbar.');
-    return {code:lines.join('\r\n').trimEnd()+'\r\n',errors,warnings};
-  }
-  function updatePreview() {
-    const result=build(), feedback=$('feedback'); feedback.replaceChildren();
-    for (const message of result.errors) { const p=document.createElement('div');p.className='warning';p.textContent=message;feedback.append(p); }
-    for (const message of result.warnings) { const p=document.createElement('div');p.className='warning';p.textContent=message;feedback.append(p); }
-    if (state.length && !result.errors.length) { const p=document.createElement('div');p.className='ok';p.textContent='Alle Pflichtfelder und bekannten Reihenfolgeregeln erfüllt.';feedback.append(p); }
-    $('code').textContent=result.code;
-    $('download').disabled=!!result.errors.length || !state.length;
-    $('copy').disabled=!!result.errors.length || !state.length;
-  }
-  function render() { renderSteps(); updatePreview(); }
-  $('sample').onclick=()=>{
-    state.length=0;
-    add('folder',{path:'C:\\Daten\\Export'});
-    add('regex',{path:'C:\\Daten',filter:'*.txt',pattern:'(?m)^Kundennummer:\\s*(?<wert>\\S+)',group:'wert'});
-    add('exportRegex',{path:'C:\\Daten\\Export\\treffer.csv'});
-  };
-  $('download').onclick=()=>{
-    const result=build(); if (result.errors.length || !state.length) return;
-    // UTF-8-BOM: Windows PowerShell 5.1 erkennt damit Umlaute im Skript zuverlässig.
-    const url=URL.createObjectURL(new Blob(['\uFEFF',result.code],{type:'text/plain;charset=utf-8'}));
-    const a=document.createElement('a');a.href=url;a.download='Mein-Skript.ps1';document.body.append(a);a.click();a.remove();
-    setTimeout(()=>URL.revokeObjectURL(url),1000);
-  };
-  $('copy').onclick=async()=>{
-    const result=build(); if (result.errors.length || !state.length) return;
-    try { await navigator.clipboard.writeText(result.code); $('copy').textContent='Kopiert'; setTimeout(()=>$('copy').textContent='Code kopieren',1800); }
-    catch { $('copy').textContent='Kopieren hier gesperrt'; setTimeout(()=>$('copy').textContent='Code kopieren',2400); }
-  };
-  renderCatalog(); render();
-  </script>
+  analyze(project.steps||[],defined);
+  function emit(nodes){return nodes.map(n=>{
+   const d=PH_BY_ID[n.def];if(!d)return '# Unbekannter Baustein';
+   let body;
+   if(d.container){
+    const children=emit(n.children||[])||'# Hier Schritte hinzufügen';
+    if(d.kind==='foreach')body=`foreach ($${name(n.values.item)} in $${name(n.values.input)}) {\n${indent(children)}\n}`;
+    else if(d.kind==='if')body=`if (${n.values.condition}) {\n${indent(children)}\n}`;
+    else if(d.kind==='try')body=`try {\n${indent(children)}\n} catch {\n    Write-Error $_\n    throw\n}`;
+    else if(d.kind==='function')body=`function ${n.values.name} {\n    [CmdletBinding(SupportsShouldProcess = $true)]\n    param(${n.values.params||''})\n${indent(children)}\n}`;
+   }else body=command(n,d);
+   const mutates=d.mutates||(['custom','remoting'].includes(d.kind)&&n.values.effect==='Änderung');
+   if(mutates){
+    const targetKey=['LiteralPath','Path','Name','Identity','source','path','name','Group','FilePath','DisplayName'].find(k=>n.values[k]!==undefined);
+    const target=targetKey?field(d,n,targetKey):q('Eigener Code');
+    body=`if ($PSCmdlet.ShouldProcess([string](${target}), ${q(d.title)})) {\n${indent(body)}\n}`;
+   }
+   return (settings.comments!==false?'# '+d.title+'\n':'')+body;
+  }).join('\n\n');}
+  const header=['#requires -Version 5.1'];
+  if(modules.size)header.push('#requires -Modules '+[...modules].map(q).join(', '));
+  header.push('# Erstellt mit PowerHelp '+PH_VERSION+' · Windows PowerShell 5.1','[CmdletBinding(SupportsShouldProcess = $true)]','param('+parameters+')',"$ErrorActionPreference = 'Stop'");
+  if(settings.preview)header.push('$WhatIfPreference = $true # Änderungen mit ShouldProcess werden übersprungen.');
+  const body=emit(project.steps||[]);
+  let code=header.join('\n')+'\n\n'+body+'\n';
+  if(settings.transcript){code=header.join('\n')+'\n\n'+`Start-Transcript -LiteralPath ${q(settings.logPath||'C:\\Daten\\PowerHelp.log')} -Append -ErrorAction Stop\ntry {\n${indent(body)}\n} finally {\n    Stop-Transcript | Out-Null\n}\n`;warnings.push({uid:null,text:'Transkript: Der Protokollpfad muss erreichbar sein; das Protokoll wird auch im Vorschau-Modus geschrieben.'});}
+  if(modules.has('Microsoft.PowerShell.LocalAccounts'))warnings.push({uid:null,text:'Lokale Konten: LocalAccounts ist auf Domänencontrollern und in 32-Bit-PowerShell auf einem 64-Bit-System nicht verfügbar.'});
+  if(modules.has('ActiveDirectory'))warnings.push({uid:null,text:'Active Directory erfordert das bereits vorhandene AD-Modul und eine erreichbare Domäne. PowerHelp installiert nichts.'});
+  if(allNodes(project.steps||[]).some(n=>PH_BY_ID[n.def]?.mutates)&&!settings.preview)warnings.push({uid:null,text:'Echtbetrieb: Dieses Skript enthält Änderungen. Vorschau-Modus aktivieren oder das gespeicherte Skript mit -WhatIf starten.'});
+  return {code,errors,warnings:[...new Map(warnings.map(w=>[w.uid+'|'+w.text,w])).values()],modules:[...modules],count:allNodes(project.steps||[]).length};
+ }
+ function normalize(s){return String(s).toLowerCase().replace(/ä/g,'a').replace(/ö/g,'o').replace(/ü/g,'u').replace(/ß/g,'ss').normalize('NFD').replace(/[\u0300-\u036f]/g,'');}
+ const stop = new Set('ich möchte mochte will kann kannst bitte ein eine einen einem einer der die das den dem des und oder mit von im in am an auf fur für zum zu als alle alles skript powershell machen erstellen'.split(' '));
+ const synonyms={user:['benutzer','konto','konten'],benutzer:['user','konto','konten'],konten:['benutzer','konto','user'],gruppe:['gruppen','mitglied'],gruppen:['gruppe','members'],löschen:['entfernen','bereinigen','aufräumen'],loschen:['entfernen','bereinigen','aufraumen'],finden:['suchen','auflisten'],suchen:['finden','lesen'],lesen:['auslesen','einlesen'],extrahieren:['regex','auslesen','daten'],auslesen:['lesen','extrahieren'],sichern:['backup','kopieren','sicherung'],backup:['sichern','sicherung','robocopy'],berechtigung:['rechte','ntfs','zugriff'],berechtigungen:['rechte','ntfs','zugriff'],rechte:['berechtigung','ntfs','zugriff'],ordner:['verzeichnis','directory'],verzeichnis:['ordner','directory'],regex:['regular','ausdruck','extrahieren'],speicher:['ram','kapazität','platte'],dienst:['service','dienste'],dienste:['dienst','service'],freigabe:['smb','share'],datum:['date','zeit'],fehler:['error','ereignisse','exception'],zeitplan:['aufgabenplanung','task','scheduler']};
+ function distance(a,b){if(Math.abs(a.length-b.length)>2)return 9;let prev=Array.from({length:b.length+1},(_,i)=>i);for(let i=1;i<=a.length;i++){let next=[i];for(let j=1;j<=b.length;j++)next[j]=Math.min(next[j-1]+1,prev[j]+1,prev[j-1]+(a[i-1]===b[j-1]?0:1));prev=next;}return prev[b.length];}
+ function search(query,items=PH_COMMANDS,category='Alle'){
+  const normalized=normalize(query).trim(),tokens=normalized.split(/[^a-z0-9]+/).filter(t=>t.length>1&&!stop.has(t));
+  return items.filter(d=>category==='Alle'||d.category===category).map(d=>{
+   const head=normalize(d.title+' '+(d.command||'')),corpus=normalize(head+' '+d.description+' '+(d.keywords||'')+' '+(d.category||'')+' '+(d.fields||[]).map(f=>f.label+' '+f.key).join(' '));const words=corpus.split(/[^a-z0-9]+/);
+   let score=0,hits=0;
+   if(normalized&&head.includes(normalized))score+=50;
+   for(const t of tokens){const alternatives=[t,...(synonyms[t]||[]).map(normalize)];let weight=0;
+    for(const term of alternatives){if(head.includes(term))weight=Math.max(weight,term===t?12:8);else if(corpus.includes(term))weight=Math.max(weight,term===t?6:4);}
+    if(!weight&&t.length>3&&words.some(w=>w.length>3&&distance(t,w)<=(t.length>=7?2:1)))weight=3;
+    if(weight){hits++;score+=weight;}
+   }
+   return {item:d,score,hits};
+  }).filter(r=>!tokens.length||r.hits>=Math.max(1,Math.ceil(tokens.length*.5))).sort((a,b)=>b.score-a.score||a.item.title.localeCompare(b.item.title,'de'));
+ }
+ function validateProject(data){
+  if(!data||data.format!=='powerhelp-project'||data.version!==2||!Array.isArray(data.steps))throw Error('Keine unterstützte PowerHelp-Projektdatei (Version 2).');
+  let count=0;
+  function check(nodes,depth=0){if(depth>12)throw Error('Zu viele verschachtelte Blöcke.');return nodes.map(n=>{if(++count>500)throw Error('Maximal 500 Schritte pro Projekt.');const d=Object.hasOwn(PH_BY_ID,n.def)?PH_BY_ID[n.def]:null;if(!d||typeof n.values!=='object'||n.values===null)throw Error('Ungültiger Baustein.');for(const f of d.fields){const v=n.values[f.key];if(v!==undefined && !(typeof v==='string'||typeof v==='boolean'||typeof v==='number'||isExpr(v)))throw Error('Ungültiger Feldwert.');if(valueText(v).length>200000)throw Error('Ein Feld ist zu groß.');}if(n.children!==undefined&&!Array.isArray(n.children))throw Error('Ungültiger Block.');return makeNode(n.def,n.values,typeof n.out==='string'?n.out:undefined,check(n.children||[],depth+1));});}
+  const steps=check(data.steps);const s=data.settings||{};
+  return {format:'powerhelp-project',version:2,title:String(data.title||'Mein Skript').slice(0,150),steps,settings:{preview:s.preview!==false,comments:s.comments!==false,params:String(s.params||'').slice(0,10000),transcript:!!s.transcript,logPath:String(s.logPath||'C:\\Daten\\PowerHelp.log').slice(0,2000)}};
+ }
+ return {q,name,validName,clone,makeNode,allNodes,compile,search,normalize,isExpr,valueText,validateProject};
+})();
+
+/* Browser UI. All text derived from projects is inserted with textContent. */
+(()=>{
+'use strict';
+const $=id=>document.getElementById(id);
+const dom=(tag,attrs={},text)=>{const el=document.createElement(tag);for(const [k,v]of Object.entries(attrs)){if(k==='class')el.className=v;else if(k==='type')el.type=v;else el.setAttribute(k,v);}if(text!==undefined)el.textContent=text;return el;};
+const initialHtml='<!doctype html>\n'+document.documentElement.outerHTML;
+let project={format:'powerhelp-project',version:2,title:'Dateibestand dokumentieren',settings:{preview:true,comments:true,params:'',transcript:false,logPath:'C:\\Daten\\PowerHelp.log'},steps:PH_TEMPLATES.find(t=>t.id==='file-report').steps.map(s=>PHCore.makeNode(s.def,s.values,s.out,s.children))};
+let tab='commands',category='Alle',query='',limit=30,insertUid=null,selectedUid=null,openIds=new Set(),dragUid=null;
+let lastResult,saveTimer,toastTimer,worker=null,regexRows=[],undoStack=[],redoStack=[];
+try{const raw=localStorage.getItem('powerhelp-v2');if(raw)project=PHCore.validateProject(JSON.parse(raw));}catch{$('autosave').textContent='Gespeichertes Projekt nicht geladen';}
+const snapshot=()=>JSON.stringify(project);
+function checkpoint(){undoStack.push(snapshot());if(undoStack.length>40)undoStack.shift();redoStack=[];}
+function changed(){renderPreview();clearTimeout(saveTimer);saveTimer=setTimeout(()=>{try{localStorage.setItem('powerhelp-v2',snapshot());$('autosave').textContent='Lokal gespeichert';}catch{$('autosave').textContent='Speicherung gesperrt · Projekt exportieren';}},200);}
+function toast(text){$('toast').textContent=text;$('toast').hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').hidden=true,3200);}
+function findNode(uid,nodes=project.steps){for(const n of nodes){if(n.uid===uid)return n;const inner=findNode(uid,n.children||[]);if(inner)return inner;}return null;}
+function findList(uid,nodes=project.steps){if(nodes.some(n=>n.uid===uid))return nodes;for(const n of nodes){const found=findList(uid,n.children||[]);if(found)return found;}return null;}
+function targetList(){const n=insertUid?findNode(insertUid):null;if(n&&PH_BY_ID[n.def].container)return n.children;insertUid=null;return project.steps;}
+function uniqueOutput(out){const names=PHCore.allNodes(project.steps).map(n=>n.out.toLowerCase());let result=out,i=2;while(result&&names.includes(result.toLowerCase()))result=out+(i++);return result;}
+function addCommand(id,values={}){checkpoint();const d=PH_BY_ID[id];const n=PHCore.makeNode(id,values,uniqueOutput(d.out||''));
+ const available=PHCore.allNodes(project.steps).filter(s=>s.out).map(s=>s.out);
+ if(insertUid){const parent=findNode(insertUid);if(parent?.def==='foreach')available.push(parent.values.item);}
+ if(available.length)for(const f of d.fields)if((d.uses||[]).includes(f.key)&&!Object.hasOwn(values,f.key))n.values[f.key]=available.at(-1);
+ targetList().push(n);selectedUid=n.uid;openIds.add(n.uid);renderSteps();changed();toast('Baustein hinzugefügt');}
+function applyTemplate(t,replace){if(replace&&project.steps.length&&!confirm('Diesen Ablauf als neues Projekt laden? Das aktuelle Projekt vorher speichern, wenn du es behalten möchtest.'))return;checkpoint();const nodes=t.steps.map(s=>PHCore.makeNode(s.def,s.values,s.out,s.children));if(replace){project.steps=nodes;project.title=t.title;insertUid=null;openIds.clear();}else targetList().push(...nodes);selectedUid=nodes[0]?.uid;openIds.add(selectedUid);renderAll();changed();toast(replace?'Ablauf geladen':'Ablauf angehängt');}
+function renderLibrary(){
+ const root=$('results');root.replaceChildren();const items=tab==='commands'?PH_COMMANDS:PH_TEMPLATES;
+ const matches=PHCore.search(query,items,tab==='commands'?category:'Alle');
+ $('resultcount').textContent=`${matches.length} ${tab==='commands'?'Bausteine':'Abläufe'}${query?' für „'+query+'“':''}`;
+ for(const {item:d}of matches.slice(0,limit)){
+  const card=dom('article',{class:'result'});card.append(dom('h3',{},d.title));if(d.command)card.append(dom('code',{},d.command));card.append(dom('p',{},d.description));
+  const buttons=dom('div',{class:'buttons'});
+  if(tab==='commands'){const add=dom('button',{class:'primary'},'Hinzufügen');add.onclick=()=>addCommand(d.id);buttons.append(add);if(d.mutates)buttons.append(dom('span',{class:'badge change'},'Änderung'));if(d.module)buttons.append(dom('span',{class:'badge module'},d.module));}
+  else{const load=dom('button',{class:'primary'},'Als neues Projekt');load.onclick=()=>applyTemplate(d,true);const append=dom('button',{},'Anhängen');append.onclick=()=>applyTemplate(d,false);buttons.append(load,append);}
+  card.append(buttons);root.append(card);
+ }
+ if(matches.length>limit){const more=dom('button',{},'Weitere Ergebnisse anzeigen');more.onclick=()=>{limit+=30;renderLibrary();};root.append(more);}
+ if(!matches.length){root.append(dom('div',{class:'empty'},'Keine Treffer. Versuche einen kürzeren Begriff oder eine andere Kategorie.'));}
+ if(query&&tab==='commands'){const found=PHCore.search(query,PH_TEMPLATES);if(found.length){const b=dom('button',{},`${found.length} passende fertige Abläufe anzeigen`);b.onclick=()=>setTab('templates');root.prepend(b);}}
+ $('commandsTab').setAttribute('aria-selected',String(tab==='commands'));$('templatesTab').setAttribute('aria-selected',String(tab==='templates'));$('category').disabled=tab==='templates';
+}
+function setTab(value){tab=value;limit=30;renderLibrary();}
+function renderSteps(){
+ const root=$('steps');root.replaceChildren();
+ function draw(nodes,prefix=''){
+  const list=dom('div');nodes.forEach((n,index)=>{
+   const d=PH_BY_ID[n.def],number=prefix+(index+1),details=dom('details',{class:'step'+(n.uid===selectedUid?' selected':''),id:n.uid});details.open=openIds.has(n.uid);
+   details.addEventListener('toggle',()=>{if(details.open)openIds.add(n.uid);else openIds.delete(n.uid);});
+   const summary=dom('summary');summary.append(dom('span',{class:'stepnum'},number));const label=dom('span',{class:'steplabel'});label.append(dom('strong',{},d.title),dom('code',{},d.command+(n.out?' → $'+n.out:'')));summary.append(label);
+   const actions=dom('span',{class:'step-actions'});
+   const action=(text,description,handler,disabled=false)=>{const b=dom('button',{type:'button','aria-label':description},text);b.disabled=disabled;b.onclick=e=>{e.preventDefault();e.stopPropagation();handler();};actions.append(b);};
+   action('↑',d.title+' nach oben',()=>{checkpoint();[nodes[index-1],nodes[index]]=[nodes[index],nodes[index-1]];renderSteps();changed();},index===0);
+   action('↓',d.title+' nach unten',()=>{checkpoint();[nodes[index],nodes[index+1]]=[nodes[index+1],nodes[index]];renderSteps();changed();},index===nodes.length-1);
+   action('⧉',d.title+' duplizieren',()=>{checkpoint();const copy=PHCore.makeNode(n.def,n.values,uniqueOutput(n.out),n.children);nodes.splice(index+1,0,copy);openIds.add(copy.uid);renderSteps();changed();});
+   action('×',d.title+' entfernen',()=>{checkpoint();nodes.splice(index,1);if(insertUid===n.uid)insertUid=null;renderSteps();changed();});
+   summary.append(actions);details.append(summary);summary.draggable=true;summary.addEventListener('dragstart',e=>{dragUid=n.uid;e.dataTransfer.setData('text/plain',n.uid);});
+   summary.addEventListener('dragover',e=>{if(dragUid&&findList(dragUid)===nodes){e.preventDefault();details.classList.add('dragover');}});summary.addEventListener('dragleave',()=>details.classList.remove('dragover'));
+   summary.addEventListener('drop',e=>{e.preventDefault();details.classList.remove('dragover');if(!dragUid||dragUid===n.uid||findList(dragUid)!==nodes)return;checkpoint();const from=nodes.findIndex(s=>s.uid===dragUid),to=nodes.findIndex(s=>s.uid===n.uid);const [moved]=nodes.splice(from,1);nodes.splice(to,0,moved);dragUid=null;renderSteps();changed();});
+   const body=dom('div',{class:'step-body'});body.append(dom('p',{class:'description'},d.description));const fields=dom('div',{class:'fields'});
+   for(const f of d.fields)fields.append(drawField(n,d,f));body.append(fields);
+   if(d.out){const field=dom('div',{class:'field outfield'}),id=n.uid+'-out';field.append(dom('label',{class:'fieldlabel',for:id},'Ausgabevariable (ohne $)'));const input=dom('input',{id,type:'text'});input.value=n.out;input.addEventListener('focus',checkpoint,{once:true});input.oninput=()=>{n.out=input.value;changed();};field.append(input);body.append(field);}
+   if(d.container){const tools=dom('div',{class:'block-tools'}),b=dom('button',{},'In diesen Block einfügen');b.onclick=()=>{insertUid=n.uid;selectedUid=n.uid;openIds.add(n.uid);renderSteps();$('search').focus();};tools.append(b);body.append(tools);const children=dom('div',{class:'children'});if(n.children.length)children.append(draw(n.children,number+'.'));else children.append(dom('div',{class:'empty'},'Hier erscheinen die Schritte innerhalb dieses Blocks.'));body.append(children);}
+   const issue=dom('div',{id:n.uid+'-error',class:'step-error'});issue.hidden=true;body.append(issue);details.append(body);list.append(details);
+  });return list;
+ }
+ if(project.steps.length)root.append(draw(project.steps));else{const empty=dom('div',{class:'empty'});empty.append(dom('h3',{},'Dein nächstes Skript beginnt hier'),dom('p',{},'Suche links nach einer Aufgabe, füge Bausteine hinzu oder lade einen fertigen Ablauf.'));const b=dom('button',{class:'primary'},'Fertige Abläufe anzeigen');b.onclick=()=>setTab('templates');empty.append(b);root.append(empty);}
+ const target=$('insertTarget');target.hidden=!insertUid;target.replaceChildren();if(insertUid){const n=findNode(insertUid);target.append(dom('span',{},'Einfügen in: '+(n?PH_BY_ID[n.def].title:'Hauptablauf')));const b=dom('button',{},'Im Hauptablauf einfügen');b.onclick=()=>{insertUid=null;renderSteps();};target.append(b);}
+}
+function drawField(n,d,f){
+ const root=dom('div',{class:'field'+(f.type==='expr'?' wide':'')}),id=n.uid+'-'+f.key;
+ if(f.type==='bool'){const label=dom('label',{class:'check',for:id}),input=dom('input',{id,type:'checkbox'});input.checked=!!n.values[f.key];input.onchange=()=>{checkpoint();n.values[f.key]=input.checked;changed();};label.append(input,document.createTextNode(f.label));root.append(label);return root;}
+ const heading=dom('div',{class:'fieldlabel'});heading.append(dom('label',{for:id},f.label+(f.optional?' (optional)':'')));
+ const expression=PHCore.isExpr(n.values[f.key]);
+ if(['text','list','number'].includes(f.type)&&!(d.kind==='regex'&&['pattern','group'].includes(f.key))&&d.kind!=='tasknew'){
+  const toggle=dom('button',{type:'button',class:expression?'active':'','aria-label':f.label+' als '+(expression?'Text':'Ausdruck')},'fx');toggle.onclick=()=>{checkpoint();n.values[f.key]=expression?n.values[f.key].expr:{expr:PHCore.valueText(n.values[f.key])};openIds.add(n.uid);renderSteps();changed();};heading.append(toggle);
+ }
+ root.append(heading);let input;
+ if(f.type==='enum'){input=dom('select',{id});for(const option of f.options)input.append(dom('option',{value:option},option==='TAB'?'Tabulator':option));input.value=n.values[f.key];}
+ else if(f.type==='expr'){input=dom('textarea',{id,spellcheck:'false'});input.value=n.values[f.key];}
+ else{input=dom('input',{id,type:f.type==='number'&&!expression?'number':'text',autocomplete:'off'});input.value=PHCore.valueText(n.values[f.key]);if(f.type==='number'&&!expression){input.min=f.min??0;input.max=f.max??1000000;}}
+ input.addEventListener('focus',()=>{if(!input.dataset.tracked){checkpoint();input.dataset.tracked='1';}});input.addEventListener('blur',()=>delete input.dataset.tracked);
+ const update=()=>{n.values[f.key]=expression?{expr:input.value}:f.type==='number'?(input.value===''?'':Number(input.value)):input.value;changed();};input.addEventListener(f.type==='enum'?'change':'input',update);root.append(input);
+ const note=f.type==='expr'||expression?'PowerShell-Ausdruck · eigene Syntax':f.type==='var'?'Vorher erzeugte Variable, ohne $':f.type==='list'?'Einzelne Namen mit Komma trennen':d.kind==='regex'&&f.key==='group'?'Name einer Capture-Gruppe oder 0 für den gesamten Treffer':null;
+ if(note)root.append(dom('span',{class:'helptext'},note));return root;
+}
+function renderPreview(){
+ lastResult=PHCore.compile(project);$('code').textContent=lastResult.code;$('stepCount').textContent=lastResult.count+' Schritte';$('modeBadge').textContent=project.settings.preview?'Vorschau-Modus':'Echtbetrieb';$('modeBadge').className='mode'+(project.settings.preview?' on':'');$('exportScript').disabled=!!lastResult.errors.length||!lastResult.count;$('copyCode').disabled=!!lastResult.errors.length||!lastResult.count;
+ $('issuesSummary').textContent='Ablaufprüfung · '+lastResult.errors.length+' Fehler · '+lastResult.warnings.length+' Hinweise';
+ const issues=$('issues');issues.replaceChildren();if(!lastResult.errors.length)issues.append(dom('p',{class:'checkok'},'Pflichtfelder und bekannte Abhängigkeiten erfüllt.'));
+ for(const e of [...lastResult.errors.map(e=>({...e,error:true})),...lastResult.warnings]){const div=dom('div',{class:'issue'+(e.error?' error':'')});if(e.uid){const b=dom('button',{},e.text);b.onclick=()=>{openIds.add(e.uid);const el=$(e.uid);if(el){el.open=true;el.scrollIntoView({behavior:'smooth',block:'center'});}};div.append(b);}else div.textContent=e.text;issues.append(div);}
+ for(const n of PHCore.allNodes(project.steps)){const target=$(n.uid+'-error');if(target){const errors=lastResult.errors.filter(e=>e.uid===n.uid);target.hidden=!errors.length;target.textContent=errors.map(e=>e.text).join(' ');}}
+ const vars=$('variables');vars.replaceChildren();for(const name of new Set(PHCore.allNodes(project.steps).filter(n=>n.out).map(n=>n.out))){const b=dom('button',{},'$'+name);b.onclick=()=>copy('$'+name);vars.append(b);}
+}
+function renderAll(){ $('projectTitle').value=project.title;renderLibrary();renderSteps();renderPreview(); }
+function download(filename,content,type='text/plain;charset=utf-8'){const url=URL.createObjectURL(new Blob([content],{type}));const a=dom('a',{href:url,download:filename});document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);}
+async function copy(text){try{await navigator.clipboard.writeText(text);toast('Kopiert');}catch{const ta=dom('textarea');ta.value=text;document.body.append(ta);ta.select();try{if(!document.execCommand('copy'))throw Error();toast('Kopiert');}catch{toast('Kopieren gesperrt. Code markieren oder als Datei exportieren.');}ta.remove();}}
+function filename(){return (PHCore.normalize(project.title).replace(/[^a-z0-9_-]/g,'-').replace(/-+/g,'-').slice(0,80)||'Mein-Skript');}
+$('search').oninput=()=>{query=$('search').value;limit=30;renderLibrary();};$('category').append(dom('option',{value:'Alle'},'Alle Kategorien'));for(const c of PH_CATEGORIES)$('category').append(dom('option',{value:c},c));$('category').onchange=()=>{category=$('category').value;limit=30;renderLibrary();};
+$('commandsTab').onclick=()=>setTab('commands');$('templatesTab').onclick=()=>setTab('templates');for(const b of document.querySelectorAll('[data-search]'))b.onclick=()=>{query=b.dataset.search;$('search').value=query;category='Alle';$('category').value='Alle';tab='templates';limit=30;renderLibrary();if(!PHCore.search(query,PH_TEMPLATES).length)setTab('commands');};
+$('projectTitle').oninput=()=>{project.title=$('projectTitle').value;changed();};$('newProject').onclick=()=>{if(project.steps.length&&!confirm('Neues leeres Projekt starten? Das aktuelle Projekt vorher speichern, wenn du es behalten möchtest.'))return;checkpoint();project.steps=[];project.title='Mein Skript';insertUid=null;openIds.clear();renderAll();changed();};
+$('saveProject').onclick=()=>download(filename()+'.powerhelp.json',JSON.stringify(project,null,2),'application/json');$('importProject').onclick=()=>$('projectFile').click();
+$('projectFile').onchange=async()=>{const f=$('projectFile').files[0];if(!f)return;try{if(f.size>5*1024*1024)throw Error('Projektdatei ist zu groß (maximal 5 MB).');const imported=PHCore.validateProject(JSON.parse(await f.text()));checkpoint();project=imported;insertUid=null;openIds.clear();renderAll();changed();toast('Projekt geladen');}catch(e){toast('Projekt nicht geladen: '+e.message);}finally{$('projectFile').value='';}};
+$('exportScript').onclick=()=>{const r=PHCore.compile(project);if(r.errors.length||!r.count)return;download(filename()+'.ps1','\uFEFF'+r.code.replace(/\r?\n/g,'\r\n'));};$('copyCode').onclick=()=>copy(lastResult.code);$('collapseAll').onclick=()=>{openIds.clear();renderSteps();};
+function syncSettings(){ $('previewMode').checked=project.settings.preview;$('commentsMode').checked=project.settings.comments;$('scriptParams').value=project.settings.params;$('transcriptMode').checked=project.settings.transcript;$('logPath').value=project.settings.logPath;}
+$('settingsOpen').onclick=()=>{syncSettings();$('settingsDialog').showModal();};$('helpOpen').onclick=()=>$('helpDialog').showModal();$('regexOpen').onclick=()=>$('regexDialog').showModal();
+for(const [id,key]of [['previewMode','preview'],['commentsMode','comments'],['transcriptMode','transcript']])$(id).onchange=()=>{checkpoint();project.settings[key]=$(id).checked;changed();};for(const [id,key]of [['scriptParams','params'],['logPath','logPath']])$(id).oninput=()=>{project.settings[key]=$(id).value;changed();};
+for(const b of document.querySelectorAll('[data-close]'))b.onclick=()=>$(b.dataset.close).close();
+const undo=dom('button',{id:'undoAction',title:'Letzte Änderung rückgängig'},'Rückgängig'),redo=dom('button',{id:'redoAction',title:'Änderung wiederholen'},'Wiederholen');$('collapseAll').before(undo,redo);
+undo.onclick=()=>{if(!undoStack.length){toast('Keine Änderung zum Rückgängigmachen');return;}redoStack.push(snapshot());project=JSON.parse(undoStack.pop());insertUid=null;renderAll();changed();};redo.onclick=()=>{if(!redoStack.length)return;undoStack.push(snapshot());project=JSON.parse(redoStack.pop());insertUid=null;renderAll();changed();};
+const offline=dom('button',{id:'offlineDownload'},'HTML herunterladen');offline.onclick=()=>download('PowerHelp-Offline.html',initialHtml,'text/html;charset=utf-8');$('helpOpen').before(offline);
+document.addEventListener('keydown',e=>{if(e.ctrlKey&&e.key.toLowerCase()==='s'){e.preventDefault();$('saveProject').click();}if(e.ctrlKey&&e.key.toLowerCase()==='f'){e.preventDefault();$('search').focus();}});
+const examples={customer:{pattern:'(?m)^Kundennummer:\\s*(?<wert>\\S+)',group:'wert'},email:{pattern:'(?<wert>[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,})',group:'wert'},ip:{pattern:'(?<wert>\\b(?:\\d{1,3}\\.){3}\\d{1,3}\\b)',group:'wert'},date:{pattern:'(?<wert>\\b\\d{2}\\.\\d{2}\\.\\d{4}\\b)',group:'wert'},number:{pattern:'(?m)^ID:\\s*(?<wert>\\d+)',group:'wert'}};
+$('regexExample').onchange=()=>{const e=examples[$('regexExample').value];$('regexPattern').value=e.pattern;$('regexGroup').value=e.group;};
+$('regexFile').onchange=async()=>{const f=$('regexFile').files[0];if(!f)return;try{if(f.size>400000)throw Error('Die Vorschau akzeptiert Dateien bis 400 KB.');const text=new TextDecoder($('regexEncoding').value).decode(await f.arrayBuffer());if(text.length>100000)throw Error('Text ist zu lang (maximal 100.000 Zeichen).');$('regexText').value=text;toast('Text lokal eingelesen');}catch(e){toast(e.message);}};
+const workerSource=String.raw`onmessage = event => { try { let {pattern,text,group}=event.data;let flags='g';const leading=pattern.match(/^\(\?([ims]+)\)/);if(leading){flags+=leading[1];pattern=pattern.slice(leading[0].length);}flags=[...new Set(flags)].join('');const regex=new RegExp(pattern,flags),rows=[];let match;while((match=regex.exec(text))!==null && rows.length<1000){const value=/^\d+$/.test(group)?match[Number(group)]:match.groups?.[group];if(value!==undefined)rows.push({position:match.index,value});if(match[0]==='')regex.lastIndex++;}postMessage({rows,capped:rows.length===1000});}catch(e){postMessage({error:e.message});} };`;
+$('testRegex').onclick=()=>{
+ if(worker)worker.terminate();regexRows=[];$('regexResults').replaceChildren();const text=$('regexText').value,pattern=$('regexPattern').value,group=$('regexGroup').value.trim()||'0';if(text.length>100000){$('regexStatus').textContent='Text ist zu lang (maximal 100.000 Zeichen).';return;}
+ const url=URL.createObjectURL(new Blob([workerSource],{type:'text/javascript'}));try{worker=new Worker(url);}catch(e){URL.revokeObjectURL(url);$('regexStatus').textContent='Regex-Vorschau ist in diesem Browser nicht verfügbar: '+e.message;return;}URL.revokeObjectURL(url);$('regexStatus').textContent='Suche läuft …';const current=worker;
+ const timeout=setTimeout(()=>{current.terminate();if(worker===current){worker=null;$('regexStatus').textContent='Abgebrochen: Der Regex-Ausdruck brauchte zu lange. Ein engeres Muster verwenden.';}},1200);
+ current.onmessage=e=>{clearTimeout(timeout);current.terminate();if(worker!==current)return;worker=null;if(e.data.error){$('regexStatus').textContent='Browser-Regex: '+e.data.error;return;}regexRows=e.data.rows;$('regexStatus').textContent=regexRows.length+' Treffer'+(e.data.capped?' (Vorschau begrenzt)':'')+'. Vorschauwerte bitte mit .NET-Verhalten abgleichen.';
+  const table=dom('table'),head=dom('tr');head.append(dom('th',{},'Position'),dom('th',{},'Wert'));table.append(head);for(const r of regexRows){const tr=dom('tr');tr.append(dom('td',{},String(r.position)),dom('td',{},r.value));table.append(tr);}$('regexResults').append(table);
+ };current.onerror=()=>{clearTimeout(timeout);current.terminate();worker=null;$('regexStatus').textContent='Regex-Vorschau konnte nicht ausgeführt werden.';};current.postMessage({text,pattern,group});
+};
+$('addRegex').onclick=()=>{addCommand('regex',{pattern:$('regexPattern').value,group:$('regexGroup').value.trim()||'0',encoding:$('regexEncoding').value==='windows-1252'?'Default':$('regexEncoding').value==='utf-16le'?'Unicode':'UTF8'});$('regexDialog').close();};
+$('exportRegexCsv').onclick=()=>{if(!regexRows.length){toast('Zuerst Treffer anzeigen');return;}const cell=v=>'"'+String(v).replace(/"/g,'""')+'"';download('Regex-Vorschau.csv','\uFEFFPosition;Wert\r\n'+regexRows.map(r=>cell(r.position)+';'+cell(r.value)).join('\r\n'),'text/csv;charset=utf-8');};
+renderAll();
+})();
+</script>
 </body>
 </html>
