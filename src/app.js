@@ -70,19 +70,19 @@ function renderSteps(){
 }
 function drawField(n,d,f){
  const root=dom('div',{class:'field'+(f.type==='expr'?' wide':'')}),id=n.uid+'-'+f.key;
- if(f.type==='bool'){const label=dom('label',{class:'check',for:id}),input=dom('input',{id,type:'checkbox'});input.checked=!!n.values[f.key];input.onchange=()=>{checkpoint();n.values[f.key]=input.checked;changed();};label.append(input,document.createTextNode(f.label));root.append(label);return root;}
+ if(f.type==='bool'&&!PHCore.isExpr(n.values[f.key])){const label=dom('label',{class:'check',for:id}),input=dom('input',{id,type:'checkbox'});input.checked=!!n.values[f.key];input.onchange=()=>{checkpoint();n.values[f.key]=input.checked;changed();};label.append(input,document.createTextNode(f.label));root.append(label);if(d.kind==='ise'){const toggle=dom('button',{type:'button','aria-label':f.label+' als Ausdruck'},'fx');toggle.onclick=()=>{checkpoint();n.values[f.key]={expr:n.values[f.key]?'$true':'$false'};renderSteps();changed();};root.append(toggle);}return root;}
  const heading=dom('div',{class:'fieldlabel'});heading.append(dom('label',{for:id},f.label+(f.optional?' (optional)':'')));
  const expression=PHCore.isExpr(n.values[f.key]);
- if(['text','list','number'].includes(f.type)&&!(d.kind==='regex'&&['pattern','group'].includes(f.key))&&d.kind!=='tasknew'){
+ if((['text','list','number'].includes(f.type)||(d.kind==='ise'&&['enum','bool'].includes(f.type)))&&!(d.kind==='regex'&&['pattern','group'].includes(f.key))&&d.kind!=='tasknew'){
   const toggle=dom('button',{type:'button',class:expression?'active':'','aria-label':f.label+' als '+(expression?'Text':'Ausdruck')},'fx');toggle.onclick=()=>{checkpoint();n.values[f.key]=expression?n.values[f.key].expr:{expr:PHCore.valueText(n.values[f.key])};openIds.add(n.uid);renderSteps();changed();};heading.append(toggle);
  }
  root.append(heading);let input;
- if(f.type==='enum'){input=dom('select',{id});if(f.optional)input.append(dom('option',{value:''},'Nicht verwenden'));for(const option of f.options)input.append(dom('option',{value:option},option==='TAB'?'Tabulator':option));input.value=n.values[f.key];}
+ if(f.type==='enum'&&!expression){input=dom('select',{id});if(f.optional)input.append(dom('option',{value:''},'Nicht verwenden'));for(const option of f.options)input.append(dom('option',{value:option},option==='TAB'?'Tabulator':option));input.value=n.values[f.key];}
  else if(f.type==='expr'){input=dom('textarea',{id,spellcheck:'false'});input.value=n.values[f.key];}
  else{input=dom('input',{id,type:f.type==='number'&&!expression?'number':'text',autocomplete:'off'});input.value=PHCore.valueText(n.values[f.key]);if(f.type==='number'&&!expression){input.min=f.min??0;input.max=f.max??1000000;}}
  input.addEventListener('focus',()=>{if(!input.dataset.tracked){checkpoint();input.dataset.tracked='1';}});input.addEventListener('blur',()=>delete input.dataset.tracked);
  const update=()=>{n.values[f.key]=expression?{expr:input.value}:f.type==='number'?(input.value===''?'':Number(input.value)):input.value;changed();};input.addEventListener(f.type==='enum'?'change':'input',update);root.append(input);
- if(d.kind==='ise'){const p=d.metadata.parameters.find(p=>p.name===f.key),sp=PHCatalog.setOf(n,d)?.parameters.find(p=>p.name===f.key);if(p)root.append(dom('span',{class:'helptext'},p.type+(sp?.mandatory?' · Pflichtparameter':'')+(sp?.pipeline?' · Pipeline nach Wert':'')+(sp?.byProperty?' · Pipeline nach Eigenschaft':'')));}
+ if(d.kind==='ise'){const p=d.metadata.parameters.find(p=>p.name===f.key),sp=PHCatalog.setOf(n,d)?.parameters.find(p=>p.name===f.key);if(p)root.append(dom('span',{class:'helptext'},p.type+(/\[\]$/.test(p.type)?' · Liste mit Komma; einzelne Werte mit Komma über fx zitieren':'')+(sp?.mandatory?' · Pflichtparameter':'')+(sp?.pipeline?' · Pipeline nach Wert':'')+(sp?.byProperty?' · Pipeline nach Eigenschaft':'')));}
  const note=f.type==='expr'||expression?'PowerShell-Ausdruck · eigene Syntax':f.type==='var'?'Vorher erzeugte Variable, ohne $':f.type==='list'?'Einzelne Namen mit Komma trennen':d.kind==='regex'&&f.key==='group'?'Name einer Capture-Gruppe oder 0 für den gesamten Treffer':null;
  if(note)root.append(dom('span',{class:'helptext'},note));return root;
 }
@@ -103,7 +103,7 @@ $('iseTab').onclick=()=>setTab('ise');$('moduleSelect').onchange=()=>{moduleName
 $('commandsTab').onclick=()=>setTab('commands');$('templatesTab').onclick=()=>setTab('templates');for(const b of document.querySelectorAll('[data-search]'))b.onclick=()=>{query=b.dataset.search;$('search').value=query;category='Alle';$('category').value='Alle';tab='templates';limit=30;renderLibrary();if(!PHCore.search(query,PH_TEMPLATES).length)setTab('commands');};
 $('projectTitle').oninput=()=>{project.title=$('projectTitle').value;changed();};$('newProject').onclick=()=>{if(project.steps.length&&!confirm('Neues leeres Projekt starten? Das aktuelle Projekt vorher speichern, wenn du es behalten möchtest.'))return;checkpoint();project.steps=[];project.title='Mein Skript';insertUid=null;openIds.clear();renderAll();changed();};
 $('saveProject').onclick=()=>download(filename()+'.powerhelp.json',JSON.stringify(project,null,2),'application/json');$('importProject').onclick=()=>$('projectFile').click();
-$('projectFile').onchange=async()=>{const f=$('projectFile').files[0];if(!f)return;try{if(f.size>5*1024*1024)throw Error('Projektdatei ist zu groß (maximal 5 MB).');const imported=PHCore.validateProject(JSON.parse(await f.text()));checkpoint();project=imported;refreshModules();insertUid=null;openIds.clear();renderAll();changed();toast('Projekt geladen');}catch(e){toast('Projekt nicht geladen: '+e.message);}finally{$('projectFile').value='';}};
+$('projectFile').onchange=async()=>{const f=$('projectFile').files[0];if(!f)return;try{if(f.size>16*1024*1024)throw Error('Projektdatei ist zu groß (maximal 16 MB).');const imported=PHCore.validateProject(JSON.parse(await f.text()));checkpoint();project=imported;refreshModules();insertUid=null;openIds.clear();renderAll();changed();toast('Projekt geladen');}catch(e){toast('Projekt nicht geladen: '+e.message);}finally{$('projectFile').value='';}};
 $('exportScript').onclick=()=>{const r=PHCore.compile(project);if(r.errors.length||!r.count)return;download(filename()+'.ps1','\uFEFF'+r.code.replace(/\r?\n/g,'\r\n'));};$('copyCode').onclick=()=>copy(lastResult.code);$('collapseAll').onclick=()=>{openIds.clear();renderSteps();};
 function syncSettings(){ $('previewMode').checked=project.settings.preview;$('commentsMode').checked=project.settings.comments;$('scriptParams').value=project.settings.params;$('transcriptMode').checked=project.settings.transcript;$('logPath').value=project.settings.logPath;}
 $('settingsOpen').onclick=()=>{syncSettings();$('settingsDialog').showModal();};$('helpOpen').onclick=()=>$('helpDialog').showModal();$('regexOpen').onclick=()=>$('regexDialog').showModal();
@@ -128,7 +128,7 @@ $('testRegex').onclick=()=>{
 $('addRegex').onclick=()=>{addCommand('regex',{pattern:$('regexPattern').value,group:$('regexGroup').value.trim()||'0',encoding:$('regexEncoding').value==='windows-1252'?'Default':$('regexEncoding').value==='utf-16le'?'Unicode':'UTF8'});$('regexDialog').close();};
 $('exportRegexCsv').onclick=()=>{if(!regexRows.length){toast('Zuerst Treffer anzeigen');return;}const cell=v=>'"'+String(v).replace(/"/g,'""')+'"';download('Regex-Vorschau.csv','\uFEFFPosition;Wert\r\n'+regexRows.map(r=>cell(r.position)+';'+cell(r.value)).join('\r\n'),'text/csv;charset=utf-8');};
 function drawIseFields(n,d,body,fields){
- const set=PHCatalog.setOf(n,d),allowed=set?.parameters||[],enabled=new Set(JSON.parse(n.values._enabled||'[]'));
+ const set=PHCatalog.setOf(n,d),allowed=set?.parameters||[],enabled=new Set();try{const a=JSON.parse(n.values._enabled||'[]');if(Array.isArray(a))for(const k of a)if(typeof k==='string')enabled.add(k);}catch{}
  const setField=drawField(n,d,d.fields.find(f=>f.key==='_set'));
  setField.querySelector('select').onchange=e=>{checkpoint();n.values._set=e.target.value;const names=new Set(PHCatalog.setOf(n,d).parameters.map(p=>p.name));for(const f of d.fields)if(!f.key.startsWith('_')&&!names.has(f.key))n.values[f.key]=f.type==='bool'?false:'';n.values._enabled=JSON.stringify([...enabled].filter(k=>names.has(k)));renderSteps();changed();};fields.append(setField);
  fields.append(drawField(n,d,d.fields.find(f=>f.key==='_effect')));
@@ -142,7 +142,7 @@ function drawIseFields(n,d,body,fields){
   for(const name of [...new Set(available)])select.append(dom('option',{value:name},'$'+name));
   select.onchange=()=>{checkpoint();n.values._input=select.value;renderSteps();changed();};inputField.append(select);
  }
- for(const sp of allowed){const f=d.fields.find(f=>f.key===sp.name);if(f&&(sp.mandatory||enabled.has(f.key)||PHCatalog.active(n.values[f.key])))fields.append(drawField(n,d,f));}
+ for(const sp of allowed){const f=d.fields.find(f=>f.key===sp.name);if(f&&(sp.mandatory||enabled.has(f.key)||PHCatalog.active(n.values[f.key])))fields.append(drawField(n,d,{...f,optional:!sp.mandatory}));}
  const more=dom('details',{class:'parameter-picker'});more.open=openIds.has(n.uid+'-params');more.ontoggle=()=>{if(more.open)openIds.add(n.uid+'-params');else openIds.delete(n.uid+'-params');};more.append(dom('summary',{},'Weitere Parameter ('+allowed.filter(p=>!p.mandatory).length+')'));
  for(const sp of allowed.filter(p=>!p.mandatory)){
   const f=d.fields.find(f=>f.key===sp.name);if(!f)continue;const label=dom('label',{class:'check'}),toggle=dom('input',{type:'checkbox'});toggle.checked=enabled.has(f.key)||PHCatalog.active(n.values[f.key]);

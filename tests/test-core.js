@@ -44,3 +44,8 @@ k.install(imported);n=c.makeNode('ise:ExampleModule/Get-Example');assert(c.compi
 const project={format:'powerhelp-project',version:2,title:'Catalog roundtrip',catalog:imported,steps:[n],settings:{preview:true}};assert.equal(c.validateProject(JSON.parse(JSON.stringify(project))).steps[0].values.Name,'test');
 k.install(b);
 console.log('PASS: 1306 echte Befehle, Parametersätze, Pipeline, komplexe Werte, Schutz und Katalogimport.');
+d=raw('Copy-Item');n=c.makeNode(d.id,{Path:'C:\\Data',Recurse:{expr:'$false'}});assert.equal(n.out,'');assert(c.compile(p([n])).code.includes('-Recurse:($false)'));
+d=raw('Get-FileHash','Microsoft.PowerShell.Utility');n=c.makeNode(d.id,{Path:'C:\\Data\\file.txt',Algorithm:{expr:'$Algorithm'}});assert.equal(c.compile(p([n])).errors.length,0);assert(d.fields.find(f=>f.key==='Algorithm').options.includes('SHA256'));
+n.values.Algorithm={expr:''};assert(c.compile(p([n])).errors.some(e=>e.text.includes('Leerer fx')));
+assert(k.entries.some(d=>d.metadata.parameters.some(p=>p.type.includes('CommandTypes')&&p.validateSet.includes('Cmdlet'))));
+console.log('PASS: Native Enum-Auswahl und fx für Schalter/Auswahlwerte.');

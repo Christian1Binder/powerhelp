@@ -7,7 +7,7 @@ const PHCore = (()=>{
  let counter=0;
  function makeNode(id,values={},out,children=[]) {
   const d=PH_BY_ID[id]; if(!d) throw new Error('Unbekannter Baustein: '+id);
-  return {uid:'s'+Date.now().toString(36)+(++counter),def:id,values:Object.fromEntries(d.fields.map(f=>[f.key,values[f.key]===undefined?clone(f.value):clone(values[f.key])])),out:out===undefined?(d.out||''):out,children:children.map(s=>makeNode(s.def,s.values,s.out,s.children))};
+  return {uid:'s'+Date.now().toString(36)+(++counter),def:id,values:Object.fromEntries(d.fields.map(f=>[f.key,values[f.key]===undefined?clone(f.value):clone(values[f.key])])),out:out===undefined?(d.kind==='ise'&&!d.metadata.outputTypes.some(t=>t!=='System.Void')?'':d.out||''):out,children:children.map(s=>makeNode(s.def,s.values,s.out,s.children))};
  }
  const isExpr = v=>v!==null&&typeof v==='object'&&typeof v.expr==='string';
  const valueText = v=>isExpr(v)?v.expr:String(v??'');
@@ -75,7 +75,8 @@ const PHCore = (()=>{
      if(!['expr'].includes(f.type)&&!isExpr(v)&&/[\r\n\u0000]/.test(txt))errors.push({uid:n.uid,text:`${d.title}: Zeilenumbrüche sind in „${f.label}“ nicht erlaubt. Für Code den Ausdruck-Modus verwenden.`});
      if(f.type==='var'&&(!f.optional||txt)&&!validName(v))errors.push({uid:n.uid,text:`${d.title}: Ungültiger Variablenname in „${f.label}“.`});
      if(f.type==='number'&&!isExpr(v)&&(!Number.isFinite(Number(v))||!Number.isInteger(Number(v))||Number(v)<(f.min??0)||Number(v)>(f.max??1000000)))errors.push({uid:n.uid,text:`${d.title}: „${f.label}“ liegt außerhalb des erlaubten Bereichs.`});
-     if(f.type==='enum'&&(!f.optional||txt)&&!f.options.includes(v))errors.push({uid:n.uid,text:`${d.title}: Ungültige Auswahl für „${f.label}“.`});
+     if(f.type==='enum'&&!isExpr(v)&&(!f.optional||txt)&&!f.options.includes(v))errors.push({uid:n.uid,text:`${d.title}: Ungültige Auswahl für „${f.label}“.`});
+     if(isExpr(v)&&!v.expr.trim())errors.push({uid:n.uid,text:d.title+': Leerer fx-Ausdruck in '+f.label+'.'});
      if(isExpr(v)||f.type==='expr'){
       for(const m of txt.matchAll(/\$([A-Za-z_][\w]*)(?=[^:\w]|$)/g))if(!has(scope,m[1])&&!/^(env|global|script|local)$/i.test(m[1]))warnings.push({uid:n.uid,text:`${d.title}: $${m[1]} ist hier nicht als Ausgabe oder Parameter bekannt. Prüfe den Ausdruck.`});
      }
@@ -127,7 +128,7 @@ const PHCore = (()=>{
    }else body=command(n,d);
    const mutates=(d.kind==='ise'&&n.values._effect!=='Nur lesen')||d.mutates||(['custom','remoting'].includes(d.kind)&&n.values.effect==='Änderung');
    if(mutates){
-    const targetKey=['LiteralPath','Path','Name','Identity','source','path','name','Group','FilePath','DisplayName'].find(k=>n.values[k]!==undefined);
+    const targetKey=['LiteralPath','Path','Name','Identity','source','path','name','Group','FilePath','DisplayName'].find(k=>n.values[k]!==undefined&&n.values[k]!==''&&n.values[k]!==false);
     const target=targetKey?field(d,n,targetKey):q(d.kind==='ise'?d.command:'Eigener Code');
     body=`if ($PSCmdlet.ShouldProcess([string](${target}), ${q(d.title)})) {\n${indent(body)}\n}`;
    }
@@ -168,8 +169,8 @@ const PHCore = (()=>{
   if(!data||data.format!=='powerhelp-project'||data.version!==2||!Array.isArray(data.steps))throw Error('Keine unterstützte PowerHelp-Projektdatei (Version 2).');
   let count=0;
   function check(nodes,depth=0){if(depth>12)throw Error('Zu viele verschachtelte Blöcke.');return nodes.map(n=>{if(++count>500)throw Error('Maximal 500 Schritte pro Projekt.');const d=Object.hasOwn(PH_BY_ID,n.def)?PH_BY_ID[n.def]:null;if(!d||typeof n.values!=='object'||n.values===null)throw Error('Ungültiger Baustein.');for(const f of d.fields){const v=n.values[f.key];if(v!==undefined && !(typeof v==='string'||typeof v==='boolean'||typeof v==='number'||isExpr(v)))throw Error('Ungültiger Feldwert.');if(valueText(v).length>200000)throw Error('Ein Feld ist zu groß.');}if(n.children!==undefined&&!Array.isArray(n.children))throw Error('Ungültiger Block.');return makeNode(n.def,n.values,typeof n.out==='string'?n.out:undefined,check(n.children||[],depth+1));});}
-  const catalog=data.catalog?PHCatalog.validate(data.catalog):null;PHCatalog.install(catalog||PH_BUILTIN_CATALOG);
-  const steps=check(data.steps);const s=data.settings||{};
+  const catalog=data.catalog?PHCatalog.validate(data.catalog):null,previous=PHCatalog.current();let steps;
+  try{PHCatalog.install(catalog||PH_BUILTIN_CATALOG);steps=check(data.steps);}catch(e){PHCatalog.install(previous||PH_BUILTIN_CATALOG);throw e;}const s=data.settings||{};
   return {format:'powerhelp-project',version:2,...(catalog?{catalog}:{}),title:String(data.title||'Mein Skript').slice(0,150),steps,settings:{preview:s.preview!==false,comments:s.comments!==false,params:String(s.params||'').slice(0,10000),transcript:!!s.transcript,logPath:String(s.logPath||'C:\\Daten\\PowerHelp.log').slice(0,2000)}};
  }
  return {q,name,validName,clone,makeNode,allNodes,compile,search,normalize,isExpr,valueText,validateProject};

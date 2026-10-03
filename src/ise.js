@@ -1,10 +1,10 @@
 /* Real Get-Command metadata, offline registry and deterministic composition rules. */
 const PHCatalog = (()=>{
- const entries=[];
+ const entries=[];let currentData;
  const common=new Set(['Verbose','Debug','ErrorAction','WarningAction','InformationAction','ErrorVariable','WarningVariable','InformationVariable','OutVariable','OutBuffer','PipelineVariable','WhatIf','Confirm']);
  const effects=/^(Set|New|Add|Remove|Clear|Enable|Disable|Start|Stop|Restart|Suspend|Resume|Reset|Rename|Move|Copy|Export|Out|Register|Unregister|Install|Uninstall|Update|Repair|Restore|Save|Publish|Unpublish|Mount|Dismount|Initialize|Format|Resize|Optimize|Import|Invoke|Enter|Exit|Connect|Disconnect|Complete|Protect|Unprotect|Grant|Revoke|Block|Unblock|Undo)-/;
  const modules={ 'Microsoft.PowerShell.Management':'Dateien & Ordner','Microsoft.PowerShell.Utility':'CSV & Daten','Microsoft.PowerShell.Security':'Berechtigungen & Freigaben','Microsoft.PowerShell.LocalAccounts':'Benutzer & Gruppen',NetTCPIP:'Netzwerk',NetAdapter:'Netzwerk',DnsClient:'Netzwerk',NetSecurity:'Netzwerk',SmbShare:'Berechtigungen & Freigaben',ScheduledTasks:'Aufgabenplanung',ActiveDirectory:'Active Directory',Storage:'Datenträger',PrintManagement:'Drucker',CimCmdlets:'System & Ereignisse',DISM:'Windows-Wartung',Defender:'Sicherheit',Appx:'Windows-Wartung',BitsTransfer:'Dateien & Ordner'};
- const verbs={Get:'abfragen lesen anzeigen suchen',Set:'setzen ändern konfigurieren',New:'neu erstellen anlegen',Add:'hinzufügen',Remove:'entfernen löschen',Clear:'leeren bereinigen',Enable:'aktivieren einschalten',Disable:'deaktivieren ausschalten',Start:'starten',Stop:'stoppen beenden',Restart:'neu starten',Test:'prüfen testen',Export:'exportieren speichern',Import:'importieren einlesen',ConvertTo:'umwandeln exportieren',ConvertFrom:'umwandeln einlesen',Format:'formatieren anzeigen',Select:'auswählen filtern',Sort:'sortieren',Measure:'messen zählen',Compare:'vergleichen',Register:'registrieren anlegen'};
+ const verbs={Copy:'kopieren sichern',Move:'verschieben',Rename:'umbenennen',Resolve:'auflösen ermitteln',Out:'ausgeben speichern',Get:'abfragen lesen anzeigen suchen',Set:'setzen ändern konfigurieren',New:'neu erstellen anlegen',Add:'hinzufügen',Remove:'entfernen löschen',Clear:'leeren bereinigen',Enable:'aktivieren einschalten',Disable:'deaktivieren ausschalten',Start:'starten',Stop:'stoppen beenden',Restart:'neu starten',Test:'prüfen testen',Export:'exportieren speichern',Import:'importieren einlesen',ConvertTo:'umwandeln exportieren',ConvertFrom:'umwandeln einlesen',Format:'formatieren anzeigen',Select:'auswählen filtern',Sort:'sortieren',Measure:'messen zählen',Compare:'vergleichen',Register:'registrieren anlegen'};
  const nouns={Item:'datei dateien ordner verzeichnis registry',Content:'text datei inhalt zeilen',ChildItem:'dateien ordner suchen verzeichnis',Process:'prozess programme',Service:'dienst dienste',LocalUser:'benutzer konto lokal',LocalGroup:'gruppe lokal',LocalGroupMember:'gruppenmitglied benutzer gruppe',NetIPAddress:'ip adresse netzwerk',NetFirewallRule:'firewall regeln',ScheduledTask:'aufgabe zeitplan',WinEvent:'ereignis protokoll fehler',Volume:'laufwerk datenträger speicher',Disk:'festplatte datenträger',Partition:'partition',Printer:'drucker',SmbShare:'freigabe smb ordner',Acl:'berechtigungen ntfs rechte',ADUser:'domäne benutzer konto',ADGroup:'domäne gruppe',ADComputer:'domäne rechner computer',String:'text regex suchen',Csv:'csv tabelle excel',Json:'json daten',CimInstance:'hardware system inventar wmi'};
  const typeOf=p=>p.type==='System.Management.Automation.SwitchParameter'?'bool':p.validateSet?.length?'enum':'text';
  const active=v=>v!==''&&v!==undefined&&v!==null&&v!==false;
@@ -33,7 +33,7 @@ const PHCatalog = (()=>{
    const d={id:'ise:'+c.module+'/'+c.name,title:c.name,command:c.name,module:c.module,category:kind,description:(verbs[parts[0]]||'Befehl')+' · '+(nouns[parts[1]]||parts[1])+'. Modul: '+c.module+'.',keywords:(verbs[parts[0]]||'')+' '+(nouns[parts[1]]||'')+' '+c.parameters.map(p=>p.name+' '+p.aliases.join(' ')).join(' '),kind:'ise',fields,out:'Ergebnis',metadata:c};
    entries.push(d);PH_BY_ID[d.id]=d;
   }
-  return clean;
+  currentData=clean;return clean;
  }
  function setOf(n,d){return d.metadata.sets.find(s=>s.name===n.values._set);}
  function expression(p,v,q){
@@ -45,7 +45,7 @@ const PHCatalog = (()=>{
  }
  function emit(n,d,q){
   const set=setOf(n,d),allowed=new Set((set?.parameters||[]).map(p=>p.name)),args=[];
-  for(const p of d.metadata.parameters){const v=n.values[p.name];if(!allowed.has(p.name)||!active(v))continue;if(p.type==='System.Management.Automation.SwitchParameter')args.push('-'+p.name);else args.push('-'+p.name+' '+expression(p,v,q));}
+  for(const p of d.metadata.parameters){const v=n.values[p.name];if(!allowed.has(p.name)||!active(v))continue;if(p.type==='System.Management.Automation.SwitchParameter')args.push('-'+p.name+(v&&typeof v==='object'?':('+v.expr.trim()+')':''));else args.push('-'+p.name+' '+expression(p,v,q));}
   let body=(n.values._input?'$'+n.values._input.replace(/^\$/,'')+' | ':'')+d.module+'\\'+d.command+(args.length?' '+args.join(' '):'');
   if(n.out)body='$'+n.out.replace(/^\$/,'')+' = '+body;
   return body;
@@ -57,8 +57,9 @@ const PHCatalog = (()=>{
   for(const p of d.metadata.parameters){const v=n.values[p.name],isExpr=v&&typeof v==='object';if(active(v)&&!allowed.has(p.name))errors.push(label+': -'+p.name+' gehört nicht zum gewählten Parametersatz.');if(!active(v)||isExpr)continue;
    if(p.type==='System.Boolean'&&!/^(true|false)$/i.test(String(v)))errors.push(label+': -'+p.name+' erwartet True oder False.');
    if(/System\.(?:S?Byte|U?Int(?:16|32|64)|Single|Double|Decimal)(?:\[\])?$/.test(p.type)&&!/^[-+]?\d+(?:\.\d+)?(?:\s*,\s*[-+]?\d+(?:\.\d+)?)*$/.test(String(v)))errors.push(label+': -'+p.name+' erwartet eine Zahl bzw. Zahlenliste.');
-   if(/ScriptBlock|Hashtable|SecureString|PSCredential|CimInstance|PSObject|Object\[\]|System.Type/.test(p.type))errors.push(label+': -'+p.name+' erwartet '+p.type+'. Den fx-Ausdruck für diesen komplexen Wert verwenden.');
+   if(/ScriptBlock|Hashtable|IDictionary|SecureString|PSCredential|CimInstance|PSObject|Object\[\]|System.Type|PSSession|PSModuleInfo|PSDriveInfo|PSVariable|Automation.Job|System.IO.Stream|X509Certificate/.test(p.type))errors.push(label+': -'+p.name+' erwartet '+p.type+'. Den fx-Ausdruck für diesen komplexen Wert verwenden.');
   }
+  try{const enabled=JSON.parse(n.values._enabled||'[]');if(!Array.isArray(enabled)||enabled.length>200||enabled.some(k=>typeof k!=='string'||!d.metadata.parameters.some(p=>p.name===k)))errors.push(label+': Ungültige Parameteraktivierung.');}catch{errors.push(label+': Ungültige Parameteraktivierung.');}
   const pipeline=n.values._input;
   if(pipeline){if(!/^[A-Za-z_][A-Za-z0-9_]*$/.test(pipeline))errors.push(label+': Ungültige Eingabevariable.');else if(![...scope].some(x=>x.toLowerCase()===pipeline.toLowerCase()))errors.push(label+': $'+pipeline+' wird vorher nicht erzeugt.');if(!set.parameters.some(p=>p.pipeline||p.byProperty))errors.push(label+': Dieser Parametersatz akzeptiert keine Pipelineeingabe.');warnings.push(label+': Pipelinebindung hängt vom tatsächlichen Objekttyp und dessen Eigenschaften ab.');}
   for(const p of set.parameters)if(p.mandatory&&!active(n.values[p.name])&&!(pipeline&&(p.pipeline||p.byProperty)))errors.push(label+': Pflichtparameter -'+p.name+' fehlt.');
@@ -80,7 +81,7 @@ const PHCatalog = (()=>{
   return result;
  }
  function inferEffect(command){return effects.test(command)?'Änderung / unbekannt':'Nur lesen';}
- return {entries,validate,install,setOf,emit,issues,defaults,suggestions,inferEffect,active};
+ return {entries,current:()=>currentData,validate,install,setOf,emit,issues,defaults,suggestions,inferEffect,active};
 })();
 
 PHCatalog.install(PH_BUILTIN_CATALOG);
