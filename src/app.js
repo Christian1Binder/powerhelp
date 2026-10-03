@@ -73,7 +73,7 @@ function drawField(n,d,f){
  if(f.type==='bool'&&!PHCore.isExpr(n.values[f.key])){const label=dom('label',{class:'check',for:id}),input=dom('input',{id,type:'checkbox'});input.checked=!!n.values[f.key];input.onchange=()=>{checkpoint();n.values[f.key]=input.checked;changed();};label.append(input,document.createTextNode(f.label));root.append(label);if(d.kind==='ise'){const toggle=dom('button',{type:'button','aria-label':f.label+' als Ausdruck'},'fx');toggle.onclick=()=>{checkpoint();n.values[f.key]={expr:n.values[f.key]?'$true':'$false'};renderSteps();changed();};root.append(toggle);}return root;}
  const heading=dom('div',{class:'fieldlabel'});heading.append(dom('label',{for:id},f.label+(f.optional?' (optional)':'')));
  const expression=PHCore.isExpr(n.values[f.key]);
- if((['text','list','number'].includes(f.type)||(d.kind==='ise'&&['enum','bool'].includes(f.type)))&&!(d.kind==='regex'&&['pattern','group'].includes(f.key))&&d.kind!=='tasknew'){
+ if((['text','list','number'].includes(f.type)||(d.kind==='ise'&&['enum','bool'].includes(f.type)))&&!(d.kind==='regex'&&['pattern','group'].includes(f.key))&&d.kind!=='tasknew'&&!f.key.startsWith('_')){
   const toggle=dom('button',{type:'button',class:expression?'active':'','aria-label':f.label+' als '+(expression?'Text':'Ausdruck')},'fx');toggle.onclick=()=>{checkpoint();n.values[f.key]=expression?n.values[f.key].expr:{expr:PHCore.valueText(n.values[f.key])};openIds.add(n.uid);renderSteps();changed();};heading.append(toggle);
  }
  root.append(heading);let input;
