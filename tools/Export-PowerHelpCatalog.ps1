@@ -18,6 +18,9 @@ $records = @(foreach ($command in ($commands | Sort-Object ModuleName,Name -Uniq
     $parameters = @(foreach ($parameter in $command.Parameters.Values) {
         if ($common -contains $parameter.Name) { continue }
         $valid = @($parameter.Attributes | Where-Object { $_ -is [System.Management.Automation.ValidateSetAttribute] } | ForEach-Object { $_.ValidValues })
+        $enumType = $parameter.ParameterType
+        if ($enumType.IsArray) { $enumType = $enumType.GetElementType() }
+        if (-not $valid.Count -and $enumType.IsEnum) { $valid = @([System.Enum]::GetNames($enumType)) }
         [ordered]@{ name=$parameter.Name; type=$parameter.ParameterType.FullName; aliases=@($parameter.Aliases); validateSet=$valid }
     })
     $sets = @(foreach ($set in $command.ParameterSets) {
