@@ -17,3 +17,6 @@ jobs:
       - name: Check syntax with Windows PowerShell 5.1
         shell: powershell
         run: ./tests/validate-powershell.ps1 -CaseFile cases.json
+      - name: Export Windows command metadata
+        shell: powershell
+        run: ./tools/Export-PowerHelpCatalog.ps1 -Path catalog.json -EmitCompressed
