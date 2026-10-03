@@ -21,3 +21,26 @@ assert.throws(()=>c.validateProject({format:'powerhelp-project',version:2,steps:
 const roundTrip=c.validateProject(JSON.parse(JSON.stringify({format:'powerhelp-project',version:2,title:'Test',settings:{preview:true},steps:[loop,c.makeNode('files')]})));assert.equal(roundTrip.steps.length,2);
 for(const d of commands.filter(d=>d.mutates)){const r=c.compile(p([c.makeNode(d.id)]));assert(r.code.includes('$PSCmdlet.ShouldProcess'),d.id+' has no guard');}
 console.log(`PASS: ${commands.length} Bausteine, ${templates.length} Abläufe, Suche, Abhängigkeiten, Eingaben und Vorschau-Schutz.`);
+// ISE command metadata, parameter sets and offline imported modules.
+const {PHCatalog:k,PH_BUILTIN_CATALOG:b,PH_BY_ID:registry}=require('./load-core');
+assert.equal(k.entries.length,1306);
+const raw=(cmd,module='Microsoft.PowerShell.Management')=>registry['ise:'+module+'/'+cmd];
+let d=raw('Copy-Item');assert(d&&d.metadata.sets.length>=2);
+let n=c.makeNode(d.id,{_set:d.metadata.sets.find(s=>s.parameters.some(p=>p.name==='LiteralPath')).name,LiteralPath:"C:\\O'Brien.txt",Destination:'C:\\Backup'});
+let r=c.compile(p([n]));assert.equal(r.errors.length,0,JSON.stringify(r.errors));assert(r.code.includes("Microsoft.PowerShell.Management\\Copy-Item"));assert(r.code.includes("'C:\\O''Brien.txt'"));assert(r.code.includes('ShouldProcess'));
+n.values.Path='C:\\Other';assert(c.compile(p([n])).errors.some(e=>e.text.includes('Parametersatz')));n.values.Path='';
+d=raw('Where-Object','Microsoft.PowerShell.Core');const scriptSet=d.metadata.sets.find(s=>s.parameters.some(p=>p.name==='FilterScript'));assert(scriptSet);
+n=c.makeNode(d.id,{_set:scriptSet.name,FilterScript:'{ $_.Length -gt 1MB }',_input:'Dateien'});assert(c.compile(p([c.makeNode('files'),n])).errors.some(e=>e.text.includes('fx-Ausdruck')));
+n.values.FilterScript={expr:'{ $_.Length -gt 1MB }'};n.values._effect='Nur lesen';r=c.compile(p([c.makeNode('files'),n]));assert.equal(r.errors.length,0);assert(r.code.includes('$Dateien | Microsoft.PowerShell.Core\\Where-Object -FilterScript ({ $_.Length -gt 1MB })'));assert(!r.modules.includes('Microsoft.PowerShell.Core'));
+n.values._input='Missing';assert(c.compile(p([n])).errors.some(e=>e.text.includes('vorher nicht erzeugt')));
+d=raw('Get-Process');n=c.makeNode(d.id,{_effect:'Nur lesen'});n.out='';assert.equal(c.compile(p([n])).errors.length,0);
+assert(k.suggestions([c.makeNode('files')]).some(x=>x.id==='where'));assert(k.suggestions([c.makeNode('regex')]).some(x=>x.id==='csvout'));
+assert(c.search('Get-NetIPAddress',k.entries).some(x=>x.item.command==='Get-NetIPAddress'));
+assert(c.search('drucker',k.entries).some(x=>x.item.module==='PrintManagement'));
+assert.throws(()=>k.validate({...b,powershell:'7.5.0'}));
+assert.throws(()=>k.validate({...b,commands:[{...b.commands[0],name:'Bad; Start-Process'}]}));
+const imported={format:'powerhelp-catalog',version:1,powershell:'5.1.0',commands:[{name:'Get-Example',module:'ExampleModule',outputTypes:['System.String'],parameters:[{name:'Name',type:'System.String',aliases:[],validateSet:[]}],sets:[{name:'Default',default:true,parameters:[{name:'Name',mandatory:true,pipeline:false,byProperty:false}]}]}]};
+k.install(imported);n=c.makeNode('ise:ExampleModule/Get-Example');assert(c.compile(p([n])).errors.some(e=>e.text.includes('Pflichtparameter')));n.values.Name='test';assert.equal(c.compile(p([n])).errors.length,0);
+const project={format:'powerhelp-project',version:2,title:'Catalog roundtrip',catalog:imported,steps:[n],settings:{preview:true}};assert.equal(c.validateProject(JSON.parse(JSON.stringify(project))).steps[0].values.Name,'test');
+k.install(b);
+console.log('PASS: 1306 echte Befehle, Parametersätze, Pipeline, komplexe Werte, Schutz und Katalogimport.');

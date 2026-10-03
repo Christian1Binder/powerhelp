@@ -59,3 +59,67 @@ node tests/generate-cases.js cases.json
 ```
 
 Die GitHub-Actions-Prüfung führt den Generatortest aus und prüft 122 erzeugte Skripte mit dem Parser von Windows PowerShell 5.1. Sie kontrolliert außerdem Parameter der auf dem Prüfrechner verfügbaren Cmdlets. Dabei werden keine generierten Administratorbefehle ausgeführt.
+
+## PowerHelp 3.0: ISE-Katalog und Verknüpfungshilfe
+
+Zusätzlich zu den 107 geführten Bausteinen stehen unter **Alle Befehle** 1.306 echte
+Befehlsdefinitionen aus 32 Windows-Modulen zur Verfügung. Erfasst mit `Get-Command`
+in Windows PowerShell 5.1 auf Windows Server 2025. Der Katalog enthält keine
+Microsoft-365-Module und ist vollständig in der Offline-HTML eingebaut. Er ist
+kein Versprechen, dass alle Module auf jedem Windows-Rechner verfügbar sind.
+
+- Modulfilter, Befehls-/Parametersuche, deutsche Aufgabenbegriffe.
+- ISE-artige Parameterformulare mit auswählbarem Parametersatz.
+- Pflichtfelder sichtbar; weitere Parameter gezielt aktivieren.
+- Typinformationen, Auswahlwerte, Aliase und Pipelineangaben aus echten Metadaten.
+- Unvereinbare Parameterkombinationen blockieren den Export.
+- `fx` für ScriptBlocks, Hashtables, Credentials und andere komplexe Werte.
+- Eingabevariablen erzeugen eine Pipeline; Ausgabevariablen können leer bleiben.
+- Wirkung zunächst **Änderung / unbekannt**: der Schritt wird im Vorschau-Modus
+  übersprungen. Bei geprüften Lesebefehlen auf **Nur lesen** umstellen.
+- Kontextbezogene nächste Schritte für typische Abläufe; für Katalogbefehle
+  zusätzlich Vorschläge anhand deklarierter Pipeline- und Ausgabetypen.
+
+### Katalog eines konkreten Servers importieren
+
+Unter **Server-Katalog** das Exportskript herunterladen. Auf dem gewünschten
+Rechner in **Windows PowerShell 5.1** ausführen:
+
+```powershell
+.\Export-PowerHelpCatalog.ps1 -Path .\PowerHelp-Catalog.json
+# Optional: alle bereits installierten Module berücksichtigen
+.\Export-PowerHelpCatalog.ps1 -Path .\PowerHelp-Catalog.json -AllAvailable
+```
+
+Die JSON-Datei in PowerHelp importieren. Sie ergänzt/aktualisiert den eingebauten
+Katalog und wird in der Projektdatei mitgespeichert. Das Skript installiert nichts,
+aktualisiert keine Hilfe, kontaktiert keinen Server und führt die gefundenen
+Administratorbefehle nicht aus. `Get-Command` kann vorhandene Module laden; deren
+Initialisierungscode liegt außerhalb von PowerHelp. Mit `-AllAvailable` erscheinen
+auch bereits vorhandene Drittanbietermodule. Der Standardexport ist auf die im
+Skript aufgezählten Windows- und Rollenmodule begrenzt.
+
+### Grenzen der Verknüpfungshilfe
+
+Die Verknüpfungshilfe arbeitet mit Regeln, nicht mit einer Online-KI. Deklarierte
+Ausgabetypen sind nicht immer vollständig. Tatsächliche Pipelinebindung,
+Objekteigenschaften, dynamische Providerparameter, Ressourcen, Berechtigungen
+und Seiteneffekte können im Browser nicht vollständig geprüft werden. Vorhandene
+Skriptparameter und eigene Ausdrücke bleiben PowerShell-Code. Unbekannte
+Parametersätze und ungültige Imports werden zurückgewiesen.
+
+### Katalog regenerieren
+
+```powershell
+.\tools\Export-PowerHelpCatalog.ps1 -Path catalog.json
+```
+
+```sh
+python tools/pack_catalog.py catalog.json src/builtin.js
+python build.py
+node tests/test-core.js
+node tests/generate-cases.js cases.json
+```
+
+Die CI parst nun 3.572 erzeugte Skripte: geführte Bausteine/Vorlagen sowie jeden
+Parametersatz aller eingebauten Befehle. Sie führt diese Skripte nicht aus.

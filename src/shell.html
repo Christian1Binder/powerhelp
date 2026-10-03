@@ -9,15 +9,16 @@
 </head>
 <body>
 <header>
- <div class="brand"><span class="logo" aria-hidden="true">&gt;_</span><div><h1>PowerHelp <small>2.0</small></h1><span class="offline">Offline · Windows PowerShell 5.1</span></div></div>
- <div class="header-actions"><button id="newProject">Neu</button><button id="importProject">Projekt öffnen</button><button id="saveProject">Projekt speichern</button><button id="regexOpen">Regex-Werkstatt</button><button id="settingsOpen">Optionen</button><button id="helpOpen" aria-label="Hilfe">?</button><button class="primary" id="exportScript">.ps1 exportieren</button></div>
+ <div class="brand"><span class="logo" aria-hidden="true">&gt;_</span><div><h1>PowerHelp <small>3.0</small></h1><span class="offline">Offline · Windows PowerShell 5.1</span></div></div>
+ <div class="header-actions"><button id="newProject">Neu</button><button id="importProject">Projekt öffnen</button><button id="saveProject">Projekt speichern</button><button id="regexOpen">Regex-Werkstatt</button><button id="catalogOpen">Server-Katalog</button><button id="settingsOpen">Optionen</button><button id="helpOpen" aria-label="Hilfe">?</button><button class="primary" id="exportScript">.ps1 exportieren</button></div>
 </header>
 <main class="app">
  <aside class="library" aria-label="Befehlsbibliothek">
   <label class="searchlabel" for="search">Welche Aufgabe möchtest du lösen?</label>
   <input class="searchbox" id="search" type="search" placeholder="z. B. alte Dateien löschen" autocomplete="off">
   <div class="searchchips"><button data-search="Regex Daten extrahieren">Regex</button><button data-search="Benutzer CSV">Benutzer aus CSV</button><button data-search="NTFS Rechte">NTFS</button><button data-search="Backup">Backup</button></div>
-  <div class="tabs" role="tablist" aria-label="Bibliothekstyp"><button role="tab" aria-selected="true" id="commandsTab">Bausteine</button><button role="tab" aria-selected="false" id="templatesTab">Fertige Abläufe</button></div>
+  <div class="tabs" role="tablist" aria-label="Bibliothekstyp"><button role="tab" aria-selected="true" id="commandsTab">Bausteine</button><button role="tab" aria-selected="false" id="templatesTab">Fertige Abläufe</button><button role="tab" aria-selected="false" id="iseTab">Alle Befehle</button></div>
+  <div id="moduleFilter" hidden><label for="moduleSelect">Modul</label><select id="moduleSelect"></select></div>
   <label class="visually-hidden" for="category">Kategorie</label><select id="category"></select>
   <p class="resultcount" id="resultcount" aria-live="polite"></p>
   <div id="results"></div>
@@ -27,6 +28,7 @@
   <div class="subline"><span id="stepCount"></span><span class="mode on" id="modeBadge">Vorschau-Modus</span><span id="autosave">Lokal gespeichert</span></div>
   <div class="insert-target" id="insertTarget" hidden></div>
   <div class="statusbar" id="status" aria-live="polite"></div>
+  <section id="nextSteps" class="next-steps" aria-label="Passende Folgeschritte"></section>
   <div id="steps"></div>
  </section>
  <section class="preview" aria-label="Skriptvorschau">
@@ -38,7 +40,17 @@
   <p class="footer-note">Die Seite erzeugt Skripte und führt sie nicht aus. Prüfungen im Browser sind Regeln; die echte PowerShell-Syntax wird hier nicht ausgeführt.</p>
  </section>
 </main>
+<input id="catalogFile" type="file" accept=".json" hidden>
 <input id="projectFile" type="file" accept=".json,.powerhelp" hidden>
+<dialog id="catalogDialog" aria-labelledby="catalogTitle">
+ <div class="dialoghead"><h2 id="catalogTitle">Befehlskatalog des Servers</h2><button data-close="catalogDialog" aria-label="Server-Katalog schließen">×</button></div>
+ <p id="catalogInfo"></p>
+ <p>Der eingebaute Katalog stammt aus Windows PowerShell 5.1 auf Windows Server 2025. Die tatsächlich verfügbaren Befehle hängen von Windows-Version und vorhandenen Rollenmodulen ab. Microsoft 365 ist nicht enthalten.</p>
+ <ol><li>Das Exportskript herunterladen und auf dem gewünschten Windows-Rechner mit Windows PowerShell 5.1 ausführen.</li><li>Die erzeugte PowerHelp-Catalog.json hier importieren. Der Import ergänzt oder aktualisiert den eingebauten Katalog.</li></ol>
+ <p>Das Skript fragt Befehlsmetadaten ab und führt die gefundenen Administratorbefehle nicht aus. Es installiert nichts und lädt keine Hilfe aus dem Internet. -AllAvailable bezieht auch bereits vorhandene weitere Module ein.</p>
+ <div class="dialogcontrols"><button id="downloadCatalogExporter">Exportskript herunterladen</button><button class="primary" id="importCatalog">Katalog importieren</button><button id="resetCatalog">Eingebauten Katalog verwenden</button></div>
+ <p class="dialognote">Imports werden mit dem Projekt gespeichert. Dynamische Parameter können vom gewählten Pfad oder Provider abhängen und sind im statischen Katalog nicht vollständig enthalten. Die Browserprüfung ersetzt keine Prüfung auf dem Zielsystem.</p>
+</dialog>
 <dialog id="settingsDialog" aria-labelledby="settingsTitle">
  <div class="dialoghead"><h2 id="settingsTitle">Skriptoptionen</h2><button data-close="settingsDialog" aria-label="Optionen schließen">×</button></div>
  <div class="settings-grid">
@@ -61,7 +73,7 @@ Datum: 02.10.2026</textarea><div class="dialogcontrols"><label>Textdatei laden <
 </dialog>
 <dialog id="helpDialog" class="help" aria-labelledby="helpTitle">
  <div class="dialoghead"><h2 id="helpTitle">PowerHelp verwenden</h2><button data-close="helpDialog" aria-label="Hilfe schließen">×</button></div>
- <h3>Vom Ziel zum Ablauf</h3><p>Suche nach einer Aufgabe, einem Befehl oder einem Stichwort. Die Suche berücksichtigt deutsche Begriffe, Synonyme und Tippfehler. Unter „Fertige Abläufe“ findest du kombinierte Schritte. Ein Ablauf kann angehängt oder als neues Projekt geladen werden.</p>
+ <h3>Alle Befehle wie in der ISE</h3><p>„Alle Befehle“ zeigt den eingebauten PowerShell-5.1-Katalog. Wähle ein Modul oder suche nach Name, Parameter oder deutschem Aufgabenbegriff. Im Schritt wählst du einen Parametersatz. Pflichtparameter sind sofort sichtbar; weitere Parameter werden unter „Weitere Parameter“ aktiviert. fx erlaubt komplexe Werte wie { $_.Length -gt 1MB }, @{Name="Wert"} oder $Datei.FullName. Texte werden zitiert; Listen mit Komma getrennt. Eingabevariablen erzeugen eine Pipeline. Deren Bindung hängt vom tatsächlichen Objekttyp ab. Nicht jeder Befehl liefert Daten; der Ausgabename kann hier leer bleiben. Die Wirkung ist zunächst konservativ auf Änderung / unbekannt eingestellt.</p><h3>Passende Folgeschritte</h3><p>Unter dem Projektnamen werden passende Schritte für den letzten Schritt der gewählten Einfügeebene vorgeschlagen. Die Hilfe ist regelbasiert und läuft offline. Parametersätze verhindern unzulässige Kombinationen; unbekannte Ausdrücke und Daten können nicht vollständig geprüft werden.</p><h3>Vom Ziel zum Ablauf</h3><p>Suche nach einer Aufgabe, einem Befehl oder einem Stichwort. Die Suche berücksichtigt deutsche Begriffe, Synonyme und Tippfehler. Unter „Fertige Abläufe“ findest du kombinierte Schritte. Ein Ablauf kann angehängt oder als neues Projekt geladen werden.</p>
  <h3>Bausteine und Variablen</h3><p>Jeder Leseschritt kann seine Ausgabe in einer Variable ablegen. Nachfolgende Schritte verwenden diesen Namen. Die Ablaufprüfung erkennt fehlende Quellvariablen. Mit <code>fx</code> schaltest du ein Textfeld auf einen PowerShell-Ausdruck um, etwa <code>$Datei.FullName</code>. Normale Texte werden automatisch richtig zitiert.</p>
  <h3>Schleifen, Bedingungen und Funktionen</h3><p>Füge einen Block hinzu und klicke auf „In diesen Block einfügen“. Weitere Bausteine landen dann innerhalb des Blocks. Mit „Im Hauptablauf einfügen“ wechselst du zurück. Schritte lassen sich per ↑/↓ oder durch Ziehen innerhalb derselben Ebene ordnen.</p>
  <h3>Speichern und weiterarbeiten</h3><p>Das Projekt wird nach Änderungen im Browser gespeichert, soweit der Browser lokale Speicherung erlaubt. „Projekt speichern“ exportiert eine JSON-Datei inklusive Ablauf und Optionen. Die .ps1-Datei enthält ausführbaren PowerShell-Code mit UTF-8-BOM. Das Projekt ist keine .ps1-Datei; eigener Code kann über den freien Codebaustein ergänzt werden.</p>

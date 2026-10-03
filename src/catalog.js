@@ -2,7 +2,7 @@
  * Parameters carry types. Text is always emitted as a single-quoted literal.
  * Expressions are deliberately separate and remain visible as code.
  */
-const PH_VERSION = '2.0.0';
+const PH_VERSION = '3.0.0';
 const PH_CATEGORIES = ['Dateien & Ordner','Text & Regex','CSV & Daten','Benutzer & Gruppen','Berechtigungen & Freigaben','Dienste & Prozesse','Netzwerk','System & Ereignisse','Aufgabenplanung','Active Directory','Skriptlogik'];
 const F = (key,label,type='text',value='',extra={})=>({key,label,type,value,...extra});
 const S = (key,label,value='',extra={})=>F(key,label,'text',value,extra);
