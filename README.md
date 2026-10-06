@@ -1,8 +1,25 @@
-# PowerHelp 2.0
+# PowerHelp 3.1
 
-**Offline-Werkstatt für Windows PowerShell 5.1.** Eine einzige HTML-Datei mit 107 Bausteinen, 15 fertigen Abläufen, aufgabenorientierter Suche und Regex-Werkstatt. Ohne Installation, Webserver, externe Bibliotheken oder Online-KI.
+**Offline-Werkstatt für Windows PowerShell 5.1.** Eine einzige HTML-Datei mit 108 Bausteinen, 16 fertigen Abläufen, aufgabenorientierter Suche und Regex-Werkstatt. Ohne Installation, Webserver, externe Bibliotheken oder Online-KI.
 
 [App öffnen](https://christian1binder.github.io/powerhelp/)
+
+## Kurze, verständliche Skripte
+
+**Kurz & verständlich** ist die Standardausgabe. Sie enthält die gewählten Befehle ohne allgemeines Skriptgerüst, zusätzliche ErrorAction-Parameter oder Kommentare pro Schritt. Die Ausgabe **Mit Skriptgerüst & Absicherung** bleibt auswählbar. Kommentare, Protokoll und Skriptparameter lassen sich unabhängig aktivieren.
+
+Der Ablauf **Text aus einer Datei als CSV** erzeugt im Echtbetrieb vier Zeilen:
+
+```powershell
+$Text = Get-Content -LiteralPath 'C:\Daten\bericht.txt' -Raw -Encoding 'UTF8'
+$Treffer = [regex]::Matches($Text, '(?m)^Kundennummer:\s*(?<wert>\S+)') |
+    ForEach-Object { [pscustomobject]@{ Wert = $_.Groups['wert'].Value } }
+$Treffer | Export-Csv -LiteralPath 'C:\Daten\ergebnis.csv' -Delimiter ';' -Encoding 'UTF8' -NoTypeInformation
+```
+
+Die Quelle wird pro Eingabefeld ausgewählt. Diese Verbindungen werden im Projekt gespeichert und mit den Ausgabenamen aktualisiert. Manuelle Variablennamen bleiben möglich. Verbindungen dürfen nur auf vorherige Ausgaben im gleichen oder einem umgebenden Block zeigen. Bei der Extraktion aus mehreren Dateien können Quelldatei und Trefferposition im kurzen Modus abgewählt werden.
+
+Der Vorschau-Modus bleibt standardmäßig aktiv: In kurzen Skripten werden Änderungsschritte sichtbar auskommentiert. Für ausführbare Änderungen unter **Optionen** deaktivieren. Die ausführliche Ausgabe schützt Änderungen weiterhin mit ShouldProcess und unterstützt `-WhatIf`. Die Seite selbst führt keine Administratorbefehle aus.
 
 ## Offline verwenden
 
@@ -13,7 +30,7 @@
 1. Aufgabe, Stichwort oder Cmdlet suchen, zum Beispiel „alte Dateien löschen“, „Benutzer CSV“, „NTFS Rechte“ oder `Get-ChildItem`.
 2. Einzelne Bausteine hinzufügen oder einen fertigen Ablauf laden. Die Suche nutzt Synonyme und toleriert Tippfehler.
 3. Felder anpassen. Texte werden als PowerShell-Literale zitiert; **fx** wechselt zu einem sichtbaren PowerShell-Ausdruck, etwa `$Datei.FullName`.
-4. Ausgabenamen festlegen und später als Eingabevariablen verwenden. Die Ablaufprüfung meldet fehlende Quellschritte.
+4. Eingaben über die Quellauswahl mit vorherigen Bausteinen verbinden. Die Verbindung bleibt beim Umbenennen erhalten; gelöschte oder nach hinten verschobene Quellen werden gemeldet.
 5. Schleifen, Bedingungen, Funktionen und Fehlerbehandlung verschachteln. Schritte derselben Ebene mit ↑/↓ oder durch Ziehen ordnen.
 6. Projekt als JSON sichern oder Skript mit UTF-8-BOM und Windows-Zeilenenden als `.ps1` exportieren.
 

@@ -4,11 +4,12 @@
 const $=id=>document.getElementById(id);
 const dom=(tag,attrs={},text)=>{const el=document.createElement(tag);for(const [k,v]of Object.entries(attrs)){if(k==='class')el.className=v;else if(k==='type')el.type=v;else el.setAttribute(k,v);}if(text!==undefined)el.textContent=text;return el;};
 const initialHtml='<!doctype html>\n'+document.documentElement.outerHTML;
-let project={format:'powerhelp-project',version:2,title:'Dateibestand dokumentieren',settings:{preview:true,comments:true,params:'',transcript:false,logPath:'C:\\Daten\\PowerHelp.log'},steps:PH_TEMPLATES.find(t=>t.id==='file-report').steps.map(s=>PHCore.makeNode(s.def,s.values,s.out,s.children))};
+let project={format:'powerhelp-project',version:2,title:'Dateibestand dokumentieren',settings:{style:'simple',preview:true,comments:false,params:'',transcript:false,logPath:'C:\\Daten\\PowerHelp.log'},steps:PH_TEMPLATES.find(t=>t.id==='file-report').steps.map(s=>PHCore.makeNode(s.def,s.values,s.out,s.children))};
 let moduleName='Alle', searchTimer;
 let tab='commands',category='Alle',query='',limit=30,insertUid=null,selectedUid=null,openIds=new Set(),dragUid=null;
 let lastResult,saveTimer,toastTimer,worker=null,regexRows=[],undoStack=[],redoStack=[];
 try{const raw=localStorage.getItem('powerhelp-v2');if(raw)project=PHCore.validateProject(JSON.parse(raw));}catch{$('autosave').textContent='Gespeichertes Projekt nicht geladen';}
+PHCore.connectMatching(project.steps);
 const snapshot=()=>JSON.stringify(project);
 function checkpoint(){undoStack.push(snapshot());if(undoStack.length>40)undoStack.shift();redoStack=[];}
 function changed(){renderPreview();clearTimeout(saveTimer);saveTimer=setTimeout(()=>{try{localStorage.setItem('powerhelp-v2',snapshot());$('autosave').textContent='Lokal gespeichert';}catch{$('autosave').textContent='Speicherung gesperrt · Projekt exportieren';}},200);}
@@ -18,11 +19,11 @@ function findList(uid,nodes=project.steps){if(nodes.some(n=>n.uid===uid))return 
 function targetList(){const n=insertUid?findNode(insertUid):null;if(n&&PH_BY_ID[n.def].container)return n.children;insertUid=null;return project.steps;}
 function uniqueOutput(out){const names=PHCore.allNodes(project.steps).map(n=>n.out.toLowerCase());let result=out,i=2;while(result&&names.includes(result.toLowerCase()))result=out+(i++);return result;}
 function addCommand(id,values={}){checkpoint();const d=PH_BY_ID[id];const n=PHCore.makeNode(id,values,uniqueOutput(d.out||''));
- const available=PHCore.allNodes(project.steps).filter(s=>s.out).map(s=>s.out);
- if(insertUid){const parent=findNode(insertUid);if(parent?.def==='foreach')available.push(parent.values.item);}
- if(available.length)for(const f of d.fields)if((d.uses||[]).includes(f.key)&&!Object.hasOwn(values,f.key))n.values[f.key]=available.at(-1);
- targetList().push(n);selectedUid=n.uid;openIds.add(n.uid);renderSteps();changed();toast('Baustein hinzugefügt');}
-function applyTemplate(t,replace){if(replace&&project.steps.length&&!confirm('Diesen Ablauf als neues Projekt laden? Das aktuelle Projekt vorher speichern, wenn du es behalten möchtest.'))return;checkpoint();const nodes=t.steps.map(s=>PHCore.makeNode(s.def,s.values,s.out,s.children));if(replace){project.steps=nodes;project.title=t.title;insertUid=null;openIds.clear();}else targetList().push(...nodes);selectedUid=nodes[0]?.uid;openIds.add(selectedUid);renderAll();changed();toast(replace?'Ablauf geladen':'Ablauf angehängt');}
+ targetList().push(n);
+ const sources=PHCore.sourcesBefore(project.steps,n.uid);
+ for(const key of [...(d.uses||[]),...(d.kind==='ise'?['_input']:[])]){const source=Object.hasOwn(values,key)?sources.findLast(s=>s.out===values[key]):sources.at(-1);if(source){n.values[key]=source.out;n.links??={};n.links[key]=source.uid;}}
+ selectedUid=n.uid;openIds.add(n.uid);renderSteps();changed();toast('Baustein hinzugefügt');}
+function applyTemplate(t,replace){if(replace&&project.steps.length&&!confirm('Diesen Ablauf als neues Projekt laden? Das aktuelle Projekt vorher speichern, wenn du es behalten möchtest.'))return;checkpoint();const nodes=t.steps.map(s=>PHCore.makeNode(s.def,s.values,s.out,s.children));if(replace){project.steps=nodes;project.title=t.title;insertUid=null;openIds.clear();}else targetList().push(...nodes);PHCore.connectMatching(project.steps);selectedUid=nodes[0]?.uid;openIds.add(selectedUid);renderAll();changed();toast(replace?'Ablauf geladen':'Ablauf angehängt');}
 function renderLibrary(){
  const root=$('results');root.replaceChildren();const items=tab==='commands'?PH_COMMANDS:tab==='ise'?PHCatalog.entries.filter(d=>moduleName==='Alle'||d.module===moduleName):PH_TEMPLATES;
  const matches=PHCore.search(query,items,tab==='commands'?category:'Alle');
@@ -47,19 +48,19 @@ function renderSteps(){
   const list=dom('div');nodes.forEach((n,index)=>{
    const d=PH_BY_ID[n.def],number=prefix+(index+1),details=dom('details',{class:'step'+(n.uid===selectedUid?' selected':''),id:n.uid});details.open=openIds.has(n.uid);
    details.addEventListener('toggle',()=>{if(details.open)openIds.add(n.uid);else openIds.delete(n.uid);});
-   const summary=dom('summary');summary.append(dom('span',{class:'stepnum'},number));const label=dom('span',{class:'steplabel'});label.append(dom('strong',{},d.title),dom('code',{},d.command+(n.out?' → $'+n.out:'')));summary.append(label);
+   const summary=dom('summary');summary.append(dom('span',{class:'stepnum'},number));const label=dom('span',{class:'steplabel'});label.append(dom('strong',{},d.title),dom('code',{},Object.values(n.links||{}).map(uid=>PHCore.allNodes(project.steps).find(s=>s.uid===uid)?.out).filter(Boolean).map(out=>'$'+out+' → ').join('')+d.command+(n.out?' → $'+n.out:'')));summary.append(label);
    const actions=dom('span',{class:'step-actions'});
    const action=(text,description,handler,disabled=false)=>{const b=dom('button',{type:'button','aria-label':description},text);b.disabled=disabled;b.onclick=e=>{e.preventDefault();e.stopPropagation();handler();};actions.append(b);};
    action('↑',d.title+' nach oben',()=>{checkpoint();[nodes[index-1],nodes[index]]=[nodes[index],nodes[index-1]];renderSteps();changed();},index===0);
    action('↓',d.title+' nach unten',()=>{checkpoint();[nodes[index],nodes[index+1]]=[nodes[index+1],nodes[index]];renderSteps();changed();},index===nodes.length-1);
-   action('⧉',d.title+' duplizieren',()=>{checkpoint();const copy=PHCore.makeNode(n.def,n.values,uniqueOutput(n.out),n.children);nodes.splice(index+1,0,copy);openIds.add(copy.uid);renderSteps();changed();});
+   action('⧉',d.title+' duplizieren',()=>{checkpoint();const copy=PHCore.makeNode(n.def,n.values,uniqueOutput(n.out),n.children);copy.links=PHCore.clone(n.links||{});nodes.splice(index+1,0,copy);PHCore.connectMatching(project.steps);openIds.add(copy.uid);renderSteps();changed();});
    action('×',d.title+' entfernen',()=>{checkpoint();nodes.splice(index,1);if(insertUid===n.uid)insertUid=null;renderSteps();changed();});
    summary.append(actions);details.append(summary);summary.draggable=true;summary.addEventListener('dragstart',e=>{dragUid=n.uid;e.dataTransfer.setData('text/plain',n.uid);});
    summary.addEventListener('dragover',e=>{if(dragUid&&findList(dragUid)===nodes){e.preventDefault();details.classList.add('dragover');}});summary.addEventListener('dragleave',()=>details.classList.remove('dragover'));
    summary.addEventListener('drop',e=>{e.preventDefault();details.classList.remove('dragover');if(!dragUid||dragUid===n.uid||findList(dragUid)!==nodes)return;checkpoint();const from=nodes.findIndex(s=>s.uid===dragUid),to=nodes.findIndex(s=>s.uid===n.uid);const [moved]=nodes.splice(from,1);nodes.splice(to,0,moved);dragUid=null;renderSteps();changed();});
    const body=dom('div',{class:'step-body'});body.append(dom('p',{class:'description'},d.description));const fields=dom('div',{class:'fields'});
    if(d.kind==='ise')drawIseFields(n,d,body,fields);else for(const f of d.fields)fields.append(drawField(n,d,f));body.append(fields);
-   if(d.out){const field=dom('div',{class:'field outfield'}),id=n.uid+'-out';field.append(dom('label',{class:'fieldlabel',for:id},d.kind==='ise'?'Ausgabevariable (optional, ohne $)':'Ausgabevariable (ohne $)'));const input=dom('input',{id,type:'text'});input.value=n.out;input.addEventListener('focus',checkpoint,{once:true});input.oninput=()=>{n.out=input.value;changed();};field.append(input);body.append(field);}
+   if(d.out){const field=dom('div',{class:'field outfield'}),id=n.uid+'-out';field.append(dom('label',{class:'fieldlabel',for:id},d.kind==='ise'?'Ausgabevariable (optional, ohne $)':'Ausgabevariable (ohne $)'));const input=dom('input',{id,type:'text'});input.value=n.out;input.addEventListener('focus',checkpoint,{once:true});input.oninput=()=>{n.out=input.value;changed();};input.onchange=()=>{renderSteps();changed();};field.append(input);body.append(field);}
    if(d.container){const tools=dom('div',{class:'block-tools'}),b=dom('button',{},'In diesen Block einfügen');b.onclick=()=>{insertUid=n.uid;selectedUid=n.uid;openIds.add(n.uid);renderSteps();$('search').focus();};tools.append(b);body.append(tools);const children=dom('div',{class:'children'});if(n.children.length)children.append(draw(n.children,number+'.'));else children.append(dom('div',{class:'empty'},'Hier erscheinen die Schritte innerhalb dieses Blocks.'));body.append(children);}
    const issue=dom('div',{id:n.uid+'-error',class:'step-error'});issue.hidden=true;body.append(issue);details.append(body);list.append(details);
   });return list;
@@ -76,7 +77,18 @@ function drawField(n,d,f){
  if((['text','list','number'].includes(f.type)||(d.kind==='ise'&&['enum','bool'].includes(f.type)))&&!(d.kind==='regex'&&['pattern','group'].includes(f.key))&&d.kind!=='tasknew'&&!f.key.startsWith('_')){
   const toggle=dom('button',{type:'button',class:expression?'active':'','aria-label':f.label+' als '+(expression?'Text':'Ausdruck')},'fx');toggle.onclick=()=>{checkpoint();n.values[f.key]=expression?n.values[f.key].expr:{expr:PHCore.valueText(n.values[f.key])};openIds.add(n.uid);renderSteps();changed();};heading.append(toggle);
  }
- root.append(heading);let input;
+ root.append(heading);
+ const linkable=(d.uses||[]).includes(f.key)||(d.kind==='ise'&&f.key==='_input');
+ if(linkable){
+  const sources=PHCore.sourcesBefore(project.steps,n.uid),select=dom('select',{id:id+'-source','aria-label':f.label+' aus vorherigem Schritt'});
+  select.append(dom('option',{value:''},'Variable selbst eingeben'));
+  for(const source of sources)select.append(dom('option',{value:source.uid},PH_BY_ID[source.def].title+' → $'+source.out));
+  const linked=n.links?.[f.key];if(linked&&!sources.some(s=>s.uid===linked))select.append(dom('option',{value:linked},'⚠ Verbundene Quelle fehlt / steht später'));
+  select.value=linked||'';
+  select.onchange=()=>{checkpoint();n.links??={};if(select.value){n.links[f.key]=select.value;n.values[f.key]=sources.find(s=>s.uid===select.value).out;}else delete n.links[f.key];renderSteps();changed();};root.append(select);
+  if(linked){const source=sources.find(s=>s.uid===linked);root.append(dom('span',{class:'connection'},source?'↳ Verknüpft mit $'+source.out+' · Umbenennen wird übernommen':'Quelle zuerst wieder vor diesen Schritt setzen.'));return root;}
+ }
+ let input;
  if(f.type==='enum'&&!expression){input=dom('select',{id});if(f.optional)input.append(dom('option',{value:''},'Nicht verwenden'));for(const option of f.options)input.append(dom('option',{value:option},option==='TAB'?'Tabulator':option));input.value=n.values[f.key];}
  else if(f.type==='expr'){input=dom('textarea',{id,spellcheck:'false'});input.value=n.values[f.key];}
  else{input=dom('input',{id,type:f.type==='number'&&!expression?'number':'text',autocomplete:'off'});input.value=PHCore.valueText(n.values[f.key]);if(f.type==='number'&&!expression){input.min=f.min??0;input.max=f.max??1000000;}}
@@ -87,7 +99,7 @@ function drawField(n,d,f){
  if(note)root.append(dom('span',{class:'helptext'},note));return root;
 }
 function renderPreview(){
- lastResult=PHCore.compile(project);$('code').textContent=lastResult.code;$('stepCount').textContent=lastResult.count+' Schritte';$('modeBadge').textContent=project.settings.preview?'Vorschau-Modus':'Echtbetrieb';$('modeBadge').className='mode'+(project.settings.preview?' on':'');$('exportScript').disabled=!!lastResult.errors.length||!lastResult.count;$('copyCode').disabled=!!lastResult.errors.length||!lastResult.count;
+ $('codeStyle').value=project.settings.style||'simple';lastResult=PHCore.compile(project);$('codeSize').textContent=lastResult.code.trim().split('\n').length+' Zeilen';$('code').textContent=lastResult.code;$('stepCount').textContent=lastResult.count+' Schritte';$('modeBadge').textContent=project.settings.preview?'Vorschau-Modus':'Echtbetrieb';$('modeBadge').className='mode'+(project.settings.preview?' on':'');$('exportScript').disabled=!!lastResult.errors.length||!lastResult.count;$('copyCode').disabled=!!lastResult.errors.length||!lastResult.count;
  $('issuesSummary').textContent='Ablaufprüfung · '+lastResult.errors.length+' Fehler · '+lastResult.warnings.length+' Hinweise';
  const issues=$('issues');issues.replaceChildren();if(!lastResult.errors.length)issues.append(dom('p',{class:'checkok'},'Pflichtfelder und bekannte Abhängigkeiten erfüllt.'));
  for(const e of [...lastResult.errors.map(e=>({...e,error:true})),...lastResult.warnings]){const div=dom('div',{class:'issue'+(e.error?' error':'')});if(e.uid){const b=dom('button',{},e.text);b.onclick=()=>{openIds.add(e.uid);const el=$(e.uid);if(el){el.open=true;el.scrollIntoView({behavior:'smooth',block:'center'});}};div.append(b);}else div.textContent=e.text;issues.append(div);}
@@ -105,6 +117,7 @@ $('projectTitle').oninput=()=>{project.title=$('projectTitle').value;changed();}
 $('saveProject').onclick=()=>download(filename()+'.powerhelp.json',JSON.stringify(project,null,2),'application/json');$('importProject').onclick=()=>$('projectFile').click();
 $('projectFile').onchange=async()=>{const f=$('projectFile').files[0];if(!f)return;try{if(f.size>16*1024*1024)throw Error('Projektdatei ist zu groß (maximal 16 MB).');const imported=PHCore.validateProject(JSON.parse(await f.text()));checkpoint();project=imported;refreshModules();insertUid=null;openIds.clear();renderAll();changed();toast('Projekt geladen');}catch(e){toast('Projekt nicht geladen: '+e.message);}finally{$('projectFile').value='';}};
 $('exportScript').onclick=()=>{const r=PHCore.compile(project);if(r.errors.length||!r.count)return;download(filename()+'.ps1','\uFEFF'+r.code.replace(/\r?\n/g,'\r\n'));};$('copyCode').onclick=()=>copy(lastResult.code);$('collapseAll').onclick=()=>{openIds.clear();renderSteps();};
+$('codeStyle').onchange=()=>{checkpoint();project.settings.style=$('codeStyle').value;changed();};
 function syncSettings(){ $('previewMode').checked=project.settings.preview;$('commentsMode').checked=project.settings.comments;$('scriptParams').value=project.settings.params;$('transcriptMode').checked=project.settings.transcript;$('logPath').value=project.settings.logPath;}
 $('settingsOpen').onclick=()=>{syncSettings();$('settingsDialog').showModal();};$('helpOpen').onclick=()=>$('helpDialog').showModal();$('regexOpen').onclick=()=>$('regexDialog').showModal();
 for(const [id,key]of [['previewMode','preview'],['commentsMode','comments'],['transcriptMode','transcript']])$(id).onchange=()=>{checkpoint();project.settings[key]=$(id).checked;changed();};for(const [id,key]of [['scriptParams','params'],['logPath','logPath']])$(id).oninput=()=>{project.settings[key]=$(id).value;changed();};
@@ -134,14 +147,6 @@ function drawIseFields(n,d,body,fields){
  fields.append(drawField(n,d,d.fields.find(f=>f.key==='_effect')));
  if(allowed.some(p=>p.pipeline||p.byProperty))fields.append(drawField(n,d,d.fields.find(f=>f.key==='_input')));
  else if(n.values._input){n.values._input='';}
- const inputField=fields.lastChild;
- if(inputField?.querySelector('input')&&allowed.some(p=>p.pipeline||p.byProperty)){
-  const select=dom('select',{'aria-label':'Vorhandene Eingabevariable'});select.append(dom('option',{value:''},'Vorhandene Variable wählen …'));
-  const scope=targetList(),index=scope.findIndex(s=>s.uid===n.uid),available=scope.slice(0,index<0?scope.length:index).filter(s=>s.out).map(s=>s.out);
-  const parent=insertUid?findNode(insertUid):null;if(parent?.def==='foreach')available.push(parent.values.item);
-  for(const name of [...new Set(available)])select.append(dom('option',{value:name},'$'+name));
-  select.onchange=()=>{checkpoint();n.values._input=select.value;renderSteps();changed();};inputField.append(select);
- }
  for(const sp of allowed){const f=d.fields.find(f=>f.key===sp.name);if(f&&(sp.mandatory||enabled.has(f.key)||PHCatalog.active(n.values[f.key])))fields.append(drawField(n,d,{...f,optional:!sp.mandatory}));}
  const more=dom('details',{class:'parameter-picker'});more.open=openIds.has(n.uid+'-params');more.ontoggle=()=>{if(more.open)openIds.add(n.uid+'-params');else openIds.delete(n.uid+'-params');};more.append(dom('summary',{},'Weitere Parameter ('+allowed.filter(p=>!p.mandatory).length+')'));
  for(const sp of allowed.filter(p=>!p.mandatory)){

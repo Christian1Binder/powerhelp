@@ -23,26 +23,35 @@ const PHCore = (()=>{
  }
  function field(d,n,key) { const f=d.fields.find(f=>f.key===key);return val(f,n.values[key]); }
  const indent = (s,n=1)=>s.split('\n').map(l=>'    '.repeat(n)+l).join('\n');
- function command(n,d){
+ function command(n,d,compact=false){
+  const stop=compact?'':' -ErrorAction Stop';
   const v=n.values, get=k=>field(d,n,k), out=n.out?'$'+name(n.out):'';
   let code;
-  if(d.kind==='ise')return PHCatalog.emit(n,d,q);
-  if(d.kind==='regex') code=`@(foreach ($PHDatei in Get-ChildItem -LiteralPath ${get('folder')} -Filter ${get('filter')} -File${v.recurse?' -Recurse':''} -ErrorAction Stop) {\n    $PHText = [string](Get-Content -LiteralPath $PHDatei.FullName -Raw -Encoding ${get('encoding')} -ErrorAction Stop)\n    foreach ($PHMatch in [regex]::Matches($PHText, ${get('pattern')})) {\n        $PHGruppe = $PHMatch.Groups[${/^\d+$/.test(v.group)?Number(v.group):q(v.group)}]\n        if ($PHGruppe.Success) {\n            [pscustomobject]@{ Datei = $PHDatei.FullName; Wert = $PHGruppe.Value; Position = $PHMatch.Index }\n        }\n    }\n})`;
-  else if(d.kind==='lines') code=`@(foreach ($PHDatei in Get-ChildItem -LiteralPath ${get('folder')} -Filter ${get('filter')} -File -ErrorAction Stop) {\n    $PHZeilen = @(Get-Content -LiteralPath $PHDatei.FullName -Encoding ${get('encoding')} -ErrorAction Stop)\n    foreach ($PHNummer in @(${String(v.lines).split(',').map(x=>Number(x.trim())).join(', ')})) {\n        if ($PHNummer -le $PHZeilen.Count) {\n            [pscustomobject]@{ Datei = $PHDatei.FullName; Zeile = $PHNummer; Wert = $PHZeilen[$PHNummer - 1] }\n        }\n    }\n})`;
-  else if(d.kind==='eventfilter') code=`Get-WinEvent -FilterHashtable @{ LogName = ${get('log')}; Level = ${v.level}; StartTime = (Get-Date).AddDays(-${get('days')}) } -ErrorAction Stop`;
-  else if(d.kind==='remoting') code=`Invoke-Command -ComputerName ${get('ComputerName')} -ScriptBlock {\n${indent(v.ScriptBlock)}\n} -ErrorAction Stop`;
-  else if(d.kind==='localpassword')return `$PHKennwort = Read-Host 'Neues Kennwort' -AsSecureString\nSet-LocalUser -Name ${get('Name')} -Password $PHKennwort -ErrorAction Stop`;
-  else if(d.kind==='adpassword')return `$PHKennwort = Read-Host 'Neues Domänenkennwort' -AsSecureString\nSet-ADAccountPassword -Identity ${get('Identity')} -NewPassword $PHKennwort -Reset -ErrorAction Stop`;
-  else if(d.kind==='adnewuser')return `$PHKennwort = Read-Host 'Kennwort für das neue Domänenkonto' -AsSecureString\nNew-ADUser -Name ${get('Name')} -SamAccountName ${get('SamAccountName')} -UserPrincipalName ${get('UserPrincipalName')} -Path ${get('Path')} -AccountPassword $PHKennwort -Enabled ${v.Enabled?'$true':'$false'} -ErrorAction Stop`;
+  if(d.kind==='ise')return PHCatalog.emit(n,d,q,compact);
+  if(d.kind==='regextext') code=`[regex]::Matches(${get('input')}, ${get('pattern')}) |
+    ForEach-Object { [pscustomobject]@{ Wert = $_.Groups[${/^\d+$/.test(v.group)?Number(v.group):q(v.group)}].Value } }`;
+  else if(compact&&d.kind==='regex') code=`Get-ChildItem -LiteralPath ${get('folder')} -Filter ${get('filter')} -File${v.recurse?' -Recurse':''} |
+    ForEach-Object {
+${v.source?'        $PHDatei = $_\n':''}        $PHText = Get-Content -LiteralPath $_.FullName -Raw -Encoding ${get('encoding')}
+        [regex]::Matches($PHText, ${get('pattern')}) |
+            ForEach-Object { [pscustomobject]@{ ${v.source?'Datei = $PHDatei.FullName; Position = $_.Index; ':''}Wert = $_.Groups[${/^\d+$/.test(v.group)?Number(v.group):q(v.group)}].Value } }
+    }`;
+  else if(d.kind==='regex') code=`@(foreach ($PHDatei in Get-ChildItem -LiteralPath ${get('folder')} -Filter ${get('filter')} -File${v.recurse?' -Recurse':''}${stop}) {\n    $PHText = [string](Get-Content -LiteralPath $PHDatei.FullName -Raw -Encoding ${get('encoding')}${stop})\n    foreach ($PHMatch in [regex]::Matches($PHText, ${get('pattern')})) {\n        $PHGruppe = $PHMatch.Groups[${/^\d+$/.test(v.group)?Number(v.group):q(v.group)}]\n        if ($PHGruppe.Success) {\n            [pscustomobject]@{ Datei = $PHDatei.FullName; Wert = $PHGruppe.Value; Position = $PHMatch.Index }\n        }\n    }\n})`;
+  else if(d.kind==='lines') code=`@(foreach ($PHDatei in Get-ChildItem -LiteralPath ${get('folder')} -Filter ${get('filter')} -File${stop}) {\n    $PHZeilen = @(Get-Content -LiteralPath $PHDatei.FullName -Encoding ${get('encoding')}${stop})\n    foreach ($PHNummer in @(${String(v.lines).split(',').map(x=>Number(x.trim())).join(', ')})) {\n        if ($PHNummer -le $PHZeilen.Count) {\n            [pscustomobject]@{ Datei = $PHDatei.FullName; Zeile = $PHNummer; Wert = $PHZeilen[$PHNummer - 1] }\n        }\n    }\n})`;
+  else if(d.kind==='eventfilter') code=`Get-WinEvent -FilterHashtable @{ LogName = ${get('log')}; Level = ${v.level}; StartTime = (Get-Date).AddDays(-${get('days')}) }${stop}`;
+  else if(d.kind==='remoting') code=`Invoke-Command -ComputerName ${get('ComputerName')} -ScriptBlock {\n${indent(v.ScriptBlock)}\n}${stop}`;
+  else if(d.kind==='localpassword')return `$PHKennwort = Read-Host 'Neues Kennwort' -AsSecureString\nSet-LocalUser -Name ${get('Name')} -Password $PHKennwort${stop}`;
+  else if(d.kind==='adpassword')return `$PHKennwort = Read-Host 'Neues Domänenkennwort' -AsSecureString\nSet-ADAccountPassword -Identity ${get('Identity')} -NewPassword $PHKennwort -Reset${stop}`;
+  else if(d.kind==='adnewuser')return `$PHKennwort = Read-Host 'Kennwort für das neue Domänenkonto' -AsSecureString\nNew-ADUser -Name ${get('Name')} -SamAccountName ${get('SamAccountName')} -UserPrincipalName ${get('UserPrincipalName')} -Path ${get('Path')} -AccountPassword $PHKennwort -Enabled ${v.Enabled?'$true':'$false'}${stop}`;
   else if(d.kind==='where')code=`${get('input')} | Where-Object { ${get('condition')} }`;
   else if(d.kind==='replace')code=`${get('input')} -replace ${get('pattern')}, ${get('replacement')}`;
   else if(d.kind==='split')code=`${get('input')} -split ${get('pattern')}`;
   else if(d.kind==='variable')return `${out} = ${get('value')}`;
   else if(d.kind==='custom')return v.code;
-  else if(d.kind==='newuser')return `$PHKennwort = Read-Host ${q('Kennwort für das neue Konto')} -AsSecureString\nNew-LocalUser -Name ${get('Name')} -FullName ${get('FullName')}${v.Description?' -Description '+get('Description'):''} -Password $PHKennwort${v.PasswordNeverExpires?' -PasswordNeverExpires':''} -ErrorAction Stop | Out-Null`;
+  else if(d.kind==='newuser')return `$PHKennwort = Read-Host ${q('Kennwort für das neue Konto')} -AsSecureString\nNew-LocalUser -Name ${get('Name')} -FullName ${get('FullName')}${v.Description?' -Description '+get('Description'):''} -Password $PHKennwort${v.PasswordNeverExpires?' -PasswordNeverExpires':''}${stop} | Out-Null`;
   else if(d.kind==='robocopy')return `& robocopy.exe ${get('source')} ${get('target')} ${v.mirror?'/MIR':v.recurse?'/E':''} /COPY:DAT /DCOPY:DAT /R:${get('retries')} /W:${get('wait')}\nif ($LASTEXITCODE -ge 8) { throw "Robocopy fehlgeschlagen: Exitcode $LASTEXITCODE" }`;
-  else if(d.kind==='aclgrant')return `$PHAcl = Get-Acl -LiteralPath ${get('path')} -ErrorAction Stop\n$PHRegel = New-Object System.Security.AccessControl.FileSystemAccessRule(${get('identity')}, ${get('rights')}, ${q(v.inherit?'ContainerInherit, ObjectInherit':'None')}, 'None', 'Allow')\n$PHAcl.AddAccessRule($PHRegel)\nSet-Acl -LiteralPath ${get('path')} -AclObject $PHAcl -ErrorAction Stop`;
-  else if(d.kind==='tasknew')return `$PHAktion = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument ${q('-NoProfile -File "'+String(v.script).replace(/"/g,'')+'"')}\n$PHTrigger = New-ScheduledTaskTrigger -Daily -At ${get('time')}\n$PHIdentitaet = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name\n$PHPrincipal = New-ScheduledTaskPrincipal -UserId $PHIdentitaet -LogonType Interactive -RunLevel Limited\nRegister-ScheduledTask -TaskName ${get('name')} -Action $PHAktion -Trigger $PHTrigger -Principal $PHPrincipal -ErrorAction Stop | Out-Null`;
+  else if(d.kind==='aclgrant')return `$PHAcl = Get-Acl -LiteralPath ${get('path')}${stop}\n$PHRegel = New-Object System.Security.AccessControl.FileSystemAccessRule(${get('identity')}, ${get('rights')}, ${q(v.inherit?'ContainerInherit, ObjectInherit':'None')}, 'None', 'Allow')\n$PHAcl.AddAccessRule($PHRegel)\nSet-Acl -LiteralPath ${get('path')} -AclObject $PHAcl${stop}`;
+  else if(d.kind==='tasknew')return `$PHAktion = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument ${q('-NoProfile -File "'+String(v.script).replace(/"/g,'')+'"')}\n$PHTrigger = New-ScheduledTaskTrigger -Daily -At ${get('time')}\n$PHIdentitaet = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name\n$PHPrincipal = New-ScheduledTaskPrincipal -UserId $PHIdentitaet -LogonType Interactive -RunLevel Limited\nRegister-ScheduledTask -TaskName ${get('name')} -Action $PHAktion -Trigger $PHTrigger -Principal $PHPrincipal${stop} | Out-Null`;
   else {
    let args=[];
    for(const f of d.fields){
@@ -52,15 +61,22 @@ const PHCore = (()=>{
     if(f.type==='bool'){ if(value)args.push('-'+f.key); }
     else args.push('-'+f.key+' '+val(f,value));
    }
-   code=(d.inputField?get(d.inputField)+' | ':'')+d.command+(args.length?' '+args.join(' '):'')+' -ErrorAction Stop';
+   code=(d.inputField?get(d.inputField)+' | ':'')+d.command+(args.length?' '+args.join(' '):'')+stop;
    if(d.id==='mkdir')code+=' | Out-Null';
   }
   return out?out+' = '+code:code;
  }
  function allNodes(steps){return steps.flatMap(n=>[n,...allNodes(n.children||[])]);}
+ function sourcesBefore(steps,uid){
+  function visit(nodes,scope){for(const n of nodes){if(n.uid===uid)return scope;const inner=visit(n.children||[],scope.slice());if(inner)return inner;if(n.out)scope=[...scope,n];}return null;}
+  return visit(steps,[])||[];
+ }
+ function connectMatching(steps){for(const n of allNodes(steps)){const d=PH_BY_ID[n.def];for(const key of [...(d.uses||[]),...(d.kind==='ise'?['_input']:[])]){if(n.links?.[key])continue;const source=sourcesBefore(steps,n.uid).findLast(s=>name(s.out).toLowerCase()===name(n.values[key]).toLowerCase());if(source){n.links??={};n.links[key]=source.uid;}}}return steps;}
  function compile(project){
   const errors=[],warnings=[],modules=new Set(), defined=new Set(['true','false','null','_','PSItem','PSCmdlet','WhatIfPreference','ErrorActionPreference','LASTEXITCODE','args','input','PSBoundParameters','PSScriptRoot','PSCommandPath']);
-  const settings=project.settings||{};
+  const settings=project.settings||{}, compact=settings.style!=='detailed';
+  project={...project,steps:clone(project.steps||[])};
+  for(const n of allNodes(project.steps)){const d=PH_BY_ID[n.def];for(const [key,uid] of Object.entries(n.links||{})){if(!d||!((d.uses||[]).includes(key)||(d.kind==='ise'&&key==='_input'))){errors.push({uid:n.uid,text:'Ungültige Eingabeverbindung.'});continue;}const source=sourcesBefore(project.steps,n.uid).find(s=>s.uid===uid);if(!source||!source.out){errors.push({uid:n.uid,text:'Die verbundene Quelle fehlt oder steht nicht mehr vor diesem Schritt.'});}else n.values[key]=name(source.out);}}
   const parameters=String(settings.params||'').trim();
   for(const match of parameters.matchAll(/\$([A-Za-z_][\w]*)/g))defined.add(match[1]);
   const has= (set,v)=>[...set].some(x=>x.toLowerCase()===name(v).toLowerCase());
@@ -68,7 +84,7 @@ const PHCore = (()=>{
    for(const n of nodes){
     const d=Object.hasOwn(PH_BY_ID,n.def)?PH_BY_ID[n.def]:null; if(!d){errors.push({uid:n.uid,text:'Unbekannter Baustein.'});continue;}
     if(d.module&&d.module!=='Microsoft.PowerShell.Core')modules.add(d.module);
-    if(d.kind==='ise'){const check=PHCatalog.issues(n,d,scope);for(const text of check.errors)errors.push({uid:n.uid,text});for(const text of check.warnings)warnings.push({uid:n.uid,text});}
+    if(d.kind==='ise'){const check=PHCatalog.issues(n,d,scope);for(const text of check.errors)errors.push({uid:n.uid,text});for(const text of check.warnings.filter(t=>settings.preview||!t.includes('im Vorschau-Modus')))warnings.push({uid:n.uid,text});}
     for(const f of d.fields){
      const v=n.values[f.key],txt=valueText(v);
      if(f.type!=='bool'&&!f.optional&&!f.allowEmpty&&!txt.trim())errors.push({uid:n.uid,text:`${d.title}: „${f.label}“ fehlt.`});
@@ -87,7 +103,7 @@ const PHCore = (()=>{
     if(['copy','move'].includes(d.id)&&!isExpr(n.values.LiteralPath)&&!isExpr(n.values.Destination)&&String(n.values.LiteralPath).toLowerCase()===String(n.values.Destination).toLowerCase())errors.push({uid:n.uid,text:`${d.title}: Quelle und Ziel sind identisch.`});
     if(d.id==='files'&&n.values.File&&n.values.Directory)errors.push({uid:n.uid,text:'Dateisuche: „Nur Dateien“ und „Nur Ordner“ schließen sich aus.'});
     if(d.kind==='lines'&&!/^\s*[1-9]\d{0,5}(?:\s*,\s*[1-9]\d{0,5})*\s*$/.test(n.values.lines))errors.push({uid:n.uid,text:'Zeilenextraktion: Positive Zeilennummern wie 4, 9 angeben.'});
-    if(d.kind==='regex'&&!/^(?:0|[1-9]\d{0,3}|[A-Za-z_][A-Za-z0-9_]*)$/.test(n.values.group))errors.push({uid:n.uid,text:'Regex: Gruppe muss eine Zahl oder ein Gruppenname sein.'});
+    if(['regex','regextext'].includes(d.kind)&&!/^(?:0|[1-9]\d{0,3}|[A-Za-z_][A-Za-z0-9_]*)$/.test(n.values.group))errors.push({uid:n.uid,text:'Regex: Gruppe muss eine Zahl oder ein Gruppenname sein.'});
     if(d.kind==='tasknew'&&!/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(n.values.time))errors.push({uid:n.uid,text:'Aufgabenplanung: Uhrzeit im Format HH:mm zwischen 00:00 und 23:59 angeben.'});
     if(d.kind==='tasknew'&&/["\r\n]/.test(n.values.script))errors.push({uid:n.uid,text:'Aufgabenplanung: Skriptpfad enthält ein ungültiges Zeichen.'});
     if(d.id==='regwrite'&&['DWord','QWord'].includes(n.values.PropertyType)&&!isExpr(n.values.Value)&&!/^\d+$/.test(n.values.Value))errors.push({uid:n.uid,text:'Registry: Für DWord/QWord einen nicht negativen ganzzahligen Wert angeben.'});
@@ -124,26 +140,28 @@ const PHCore = (()=>{
     if(d.kind==='foreach')body=`foreach ($${name(n.values.item)} in $${name(n.values.input)}) {\n${indent(children)}\n}`;
     else if(d.kind==='if')body=`if (${n.values.condition}) {\n${indent(children)}\n}`;
     else if(d.kind==='try')body=`try {\n${indent(children)}\n} catch {\n    Write-Error $_\n    throw\n}`;
-    else if(d.kind==='function')body=`function ${n.values.name} {\n    [CmdletBinding(SupportsShouldProcess = $true)]\n    param(${n.values.params||''})\n${indent(children)}\n}`;
-   }else body=command(n,d);
+    else if(d.kind==='function')body=`function ${n.values.name} {\n${compact?'':'    [CmdletBinding(SupportsShouldProcess = $true)]\n'}${n.values.params||!compact?'    param('+(n.values.params||'')+')\n':''}\n${indent(children)}\n}`;
+   }else body=command(n,d,compact);
    const mutates=(d.kind==='ise'&&n.values._effect!=='Nur lesen')||d.mutates||(['custom','remoting'].includes(d.kind)&&n.values.effect==='Änderung');
-   if(mutates){
+   if(mutates&&compact&&settings.preview){body='# Vorschau: '+d.title+' wird übersprungen.\n'+body.split('\n').map(l=>'# '+l).join('\n');}
+   else if(mutates&&!compact){
     const targetKey=['LiteralPath','Path','Name','Identity','source','path','name','Group','FilePath','DisplayName'].find(k=>n.values[k]!==undefined&&n.values[k]!==''&&n.values[k]!==false);
     const target=targetKey?field(d,n,targetKey):q(d.kind==='ise'?d.command:'Eigener Code');
     body=`if ($PSCmdlet.ShouldProcess([string](${target}), ${q(d.title)})) {\n${indent(body)}\n}`;
    }
-   return (settings.comments!==false?'# '+d.title+'\n':'')+body;
-  }).join('\n\n');}
-  const header=['#requires -Version 5.1'];
-  if(modules.size)header.push('#requires -Modules '+[...modules].map(q).join(', '));
-  header.push('# Erstellt mit PowerHelp '+PH_VERSION+' · Windows PowerShell 5.1','[CmdletBinding(SupportsShouldProcess = $true)]','param('+parameters+')',"$ErrorActionPreference = 'Stop'");
-  if(settings.preview)header.push('$WhatIfPreference = $true # Änderungen mit ShouldProcess werden übersprungen.');
+   return ((settings.comments===true||(!compact&&settings.comments!==false))?'# '+d.title+'\n':'')+body;
+  }).join(compact?'\n':'\n\n');}
+  const header=compact?[]:['#requires -Version 5.1'];
+  if(!compact&&modules.size)header.push('#requires -Modules '+[...modules].map(q).join(', '));
+  if(!compact)header.push('# Erstellt mit PowerHelp '+PH_VERSION+' · Windows PowerShell 5.1','[CmdletBinding(SupportsShouldProcess = $true)]','param('+parameters+')',"$ErrorActionPreference = 'Stop'");
+  if(!compact&&settings.preview)header.push('$WhatIfPreference = $true # Änderungen mit ShouldProcess werden übersprungen.');
+  if(compact&&parameters)header.push('param('+parameters+')');
   const body=emit(project.steps||[]);
-  let code=header.join('\n')+'\n\n'+body+'\n';
+  let code=(header.length?header.join('\n')+'\n\n':'')+body+'\n';
   if(settings.transcript){code=header.join('\n')+'\n\n'+`Start-Transcript -LiteralPath ${q(settings.logPath||'C:\\Daten\\PowerHelp.log')} -Append -ErrorAction Stop\ntry {\n${indent(body)}\n} finally {\n    Stop-Transcript | Out-Null\n}\n`;warnings.push({uid:null,text:'Transkript: Der Protokollpfad muss erreichbar sein; das Protokoll wird auch im Vorschau-Modus geschrieben.'});}
   if(modules.has('Microsoft.PowerShell.LocalAccounts'))warnings.push({uid:null,text:'Lokale Konten: LocalAccounts ist auf Domänencontrollern und in 32-Bit-PowerShell auf einem 64-Bit-System nicht verfügbar.'});
   if(modules.has('ActiveDirectory'))warnings.push({uid:null,text:'Active Directory erfordert das bereits vorhandene AD-Modul und eine erreichbare Domäne. PowerHelp installiert nichts.'});
-  if(allNodes(project.steps||[]).some(n=>PH_BY_ID[n.def]?.mutates)&&!settings.preview)warnings.push({uid:null,text:'Echtbetrieb: Dieses Skript enthält Änderungen. Vorschau-Modus aktivieren oder das gespeicherte Skript mit -WhatIf starten.'});
+  if(allNodes(project.steps||[]).some(n=>PH_BY_ID[n.def]?.mutates)&&!settings.preview)warnings.push({uid:null,text:'Echtbetrieb: Dieses Skript enthält Änderungen. Vorschau-Modus aktivieren und die Änderungen vor dem Ausführen prüfen.'});
   return {code,errors,warnings:[...new Map(warnings.map(w=>[w.uid+'|'+w.text,w])).values()],modules:[...modules],count:allNodes(project.steps||[]).length};
  }
  function normalize(s){return String(s).toLowerCase().replace(/ä/g,'a').replace(/ö/g,'o').replace(/ü/g,'u').replace(/ß/g,'ss').normalize('NFD').replace(/[\u0300-\u036f]/g,'');}
@@ -168,10 +186,10 @@ const PHCore = (()=>{
  function validateProject(data){
   if(!data||data.format!=='powerhelp-project'||data.version!==2||!Array.isArray(data.steps))throw Error('Keine unterstützte PowerHelp-Projektdatei (Version 2).');
   let count=0;
-  function check(nodes,depth=0){if(depth>12)throw Error('Zu viele verschachtelte Blöcke.');return nodes.map(n=>{if(++count>500)throw Error('Maximal 500 Schritte pro Projekt.');const d=Object.hasOwn(PH_BY_ID,n.def)?PH_BY_ID[n.def]:null;if(!d||typeof n.values!=='object'||n.values===null)throw Error('Ungültiger Baustein.');for(const f of d.fields){const v=n.values[f.key];if(d.kind==='ise'&&f.key.startsWith('_')&&v!==undefined&&typeof v!=='string')throw Error('Ungültige Katalogsteuerung.');if(v!==undefined && !(typeof v==='string'||typeof v==='boolean'||typeof v==='number'||isExpr(v)))throw Error('Ungültiger Feldwert.');if(valueText(v).length>200000)throw Error('Ein Feld ist zu groß.');}if(n.children!==undefined&&!Array.isArray(n.children))throw Error('Ungültiger Block.');return makeNode(n.def,n.values,typeof n.out==='string'?n.out:undefined,check(n.children||[],depth+1));});}
+  function check(nodes,depth=0){if(depth>12)throw Error('Zu viele verschachtelte Blöcke.');return nodes.map(n=>{if(++count>500)throw Error('Maximal 500 Schritte pro Projekt.');const d=Object.hasOwn(PH_BY_ID,n.def)?PH_BY_ID[n.def]:null;if(!d||typeof n.values!=='object'||n.values===null)throw Error('Ungültiger Baustein.');for(const f of d.fields){const v=n.values[f.key];if(d.kind==='ise'&&f.key.startsWith('_')&&v!==undefined&&typeof v!=='string')throw Error('Ungültige Katalogsteuerung.');if(v!==undefined && !(typeof v==='string'||typeof v==='boolean'||typeof v==='number'||isExpr(v)))throw Error('Ungültiger Feldwert.');if(valueText(v).length>200000)throw Error('Ein Feld ist zu groß.');}if(n.children!==undefined&&!Array.isArray(n.children))throw Error('Ungültiger Block.');const result=makeNode(n.def,n.values,typeof n.out==='string'?n.out:undefined);result.children=check(n.children||[],depth+1);if(typeof n.uid==='string'&&/^[a-zA-Z0-9_-]{1,80}$/.test(n.uid))result.uid=n.uid;if(n.links!==undefined){if(!n.links||typeof n.links!=='object'||Array.isArray(n.links)||Object.values(n.links).some(v=>typeof v!=='string'))throw Error('Ungültige Verbindungen.');result.links=clone(n.links);}return result;});}
   const catalog=data.catalog?PHCatalog.validate(data.catalog):null,previous=PHCatalog.current();let steps;
-  try{PHCatalog.install(catalog||PH_BUILTIN_CATALOG);steps=check(data.steps);}catch(e){PHCatalog.install(previous||PH_BUILTIN_CATALOG);throw e;}const s=data.settings||{};
-  return {format:'powerhelp-project',version:2,...(catalog?{catalog}:{}),title:String(data.title||'Mein Skript').slice(0,150),steps,settings:{preview:s.preview!==false,comments:s.comments!==false,params:String(s.params||'').slice(0,10000),transcript:!!s.transcript,logPath:String(s.logPath||'C:\\Daten\\PowerHelp.log').slice(0,2000)}};
+  try{PHCatalog.install(catalog||PH_BUILTIN_CATALOG);steps=check(data.steps);if(new Set(allNodes(steps).map(n=>n.uid)).size!==allNodes(steps).length)throw Error('Doppelte Schrittkennungen.');connectMatching(steps);}catch(e){PHCatalog.install(previous||PH_BUILTIN_CATALOG);throw e;}const s=data.settings||{};
+  return {format:'powerhelp-project',version:2,...(catalog?{catalog}:{}),title:String(data.title||'Mein Skript').slice(0,150),steps,settings:{style:s.style==='detailed'?'detailed':'simple',preview:s.preview!==false,comments:s.style?s.comments===true:false,params:String(s.params||'').slice(0,10000),transcript:!!s.transcript,logPath:String(s.logPath||'C:\\Daten\\PowerHelp.log').slice(0,2000)}};
  }
- return {q,name,validName,clone,makeNode,allNodes,compile,search,normalize,isExpr,valueText,validateProject};
+ return {sourcesBefore,connectMatching,q,name,validName,clone,makeNode,allNodes,compile,search,normalize,isExpr,valueText,validateProject};
 })();

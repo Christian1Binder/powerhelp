@@ -1,5 +1,5 @@
 const assert=require('node:assert/strict');const {PHCore:c,PH_COMMANDS:commands,PH_TEMPLATES:templates}=require('./load-core');
-const p=steps=>({steps,settings:{preview:true,comments:true,params:'',transcript:false}});
+const p=steps=>({steps,settings:{style:'detailed',preview:true,comments:true,params:'',transcript:false}});
 assert(commands.length>=100,`Only ${commands.length} commands`);
 for(const t of templates){const r=c.compile(p(t.steps.map(s=>c.makeNode(s.def,s.values,s.out,s.children))));assert.equal(r.errors.length,0,t.title+': '+JSON.stringify(r.errors));assert(r.code.startsWith('#requires -Version 5.1'));}
 const missing=c.compile(p([c.makeNode('csvout')]));assert(missing.errors.some(e=>e.text.includes('vorher nicht erzeugt')));
@@ -49,3 +49,17 @@ d=raw('Get-FileHash','Microsoft.PowerShell.Utility');n=c.makeNode(d.id,{Path:'C:
 n.values.Algorithm={expr:''};assert(c.compile(p([n])).errors.some(e=>e.text.includes('Leerer fx')));
 assert(k.entries.some(d=>d.metadata.parameters.some(p=>p.type.includes('CommandTypes')&&p.validateSet.includes('Cmdlet'))));
 console.log('PASS: Native Enum-Auswahl und fx für Schalter/Auswahlwerte.');
+
+// Compact generation and identity-based connections across edits and saved projects.
+const simple=steps=>({format:'powerhelp-project',version:2,steps,settings:{style:'simple',preview:false,comments:false}});
+let steps=templates.find(t=>t.id==='text-to-csv').steps.map(s=>c.makeNode(s.def,s.values,s.out,s.children));c.connectMatching(steps);
+r=c.compile(simple(steps));assert.equal(r.errors.length,0);assert.equal(r.code.trim().split('\n').length,4);assert(!r.code.includes('ErrorAction'));assert(!r.code.includes('ShouldProcess'));assert(r.code.includes('[pscustomobject]@{ Wert ='));
+steps[0].out='Inhalt';steps[1].out='Kundennummern';r=c.compile(simple(steps));assert.equal(r.errors.length,0);assert(r.code.includes('[regex]::Matches($Inhalt'));assert(r.code.includes('$Kundennummern | Export-Csv'));
+let restored=c.validateProject(JSON.parse(JSON.stringify(simple(steps))));assert.equal(c.compile(restored).code,r.code);
+restored.steps.reverse();assert(c.compile(restored).errors.some(e=>e.text.includes('verbundene Quelle')));
+restored=c.validateProject(JSON.parse(JSON.stringify(simple(steps))));restored.steps.shift();assert(c.compile(restored).errors.some(e=>e.text.includes('verbundene Quelle')));
+const branch=c.makeNode('if',{condition:'$true'},undefined,[{def:'read',values:{},out:'Innen'}]);const after=c.makeNode('regextext');assert.equal(c.sourcesBefore([branch,after],after.uid).length,0);
+const preview=c.compile({...simple(steps),settings:{style:'simple',preview:true,comments:false}});assert(preview.code.includes('# $Kundennummern | Export-Csv'));assert(!preview.code.split('\n').some(l=>/^[^#]*Export-Csv/.test(l)));
+const custom=c.compile(simple([c.makeNode('custom',{code:"Get-Content 'x' -ErrorAction Stop",effect:'Nur lesen'})]));assert(custom.code.includes('-ErrorAction Stop'));
+for(const t of templates){assert.equal(c.compile(simple(t.steps.map(s=>c.makeNode(s.def,s.values,s.out,s.children)))).errors.length,0,t.id);}
+console.log('PASS: kurze Skripte, vier Zeilen Datei/Regex/CSV, Umbenennen, Quellenreihenfolge, Verschachtelung, Projektimport und Vorschau.');

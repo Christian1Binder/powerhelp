@@ -9,7 +9,7 @@
 </head>
 <body>
 <header>
- <div class="brand"><span class="logo" aria-hidden="true">&gt;_</span><div><h1>PowerHelp <small>3.0</small></h1><span class="offline">Offline · Windows PowerShell 5.1</span></div></div>
+ <div class="brand"><span class="logo" aria-hidden="true">&gt;_</span><div><h1>PowerHelp <small>3.1</small></h1><span class="offline">Offline · Windows PowerShell 5.1</span></div></div>
  <div class="header-actions"><button id="newProject">Neu</button><button id="importProject">Projekt öffnen</button><button id="saveProject">Projekt speichern</button><button id="regexOpen">Regex-Werkstatt</button><button id="catalogOpen">Server-Katalog</button><button id="settingsOpen">Optionen</button><button id="helpOpen" aria-label="Hilfe">?</button><button class="primary" id="exportScript">.ps1 exportieren</button></div>
 </header>
 <main class="app">
@@ -33,7 +33,7 @@
  </section>
  <section class="preview" aria-label="Skriptvorschau">
   <div class="preview-head"><h2>PowerShell-Code</h2><button id="copyCode">Kopieren</button></div>
-  <small>Die Vorschau folgt deinem Ablauf.</small>
+  <div class="code-options"><label for="codeStyle">Ausgabe</label><select id="codeStyle"><option value="simple">Kurz &amp; verständlich</option><option value="detailed">Mit Skriptgerüst &amp; Absicherung</option></select><small id="codeSize"></small></div>
   <pre class="code" id="code" tabindex="0" aria-label="Generiertes Skript"></pre>
   <details class="collapsible" open><summary id="issuesSummary">Ablaufprüfung</summary><div id="issues" class="issues" aria-live="polite"></div></details>
   <details class="collapsible"><summary>Ausgabevariablen im Ablauf</summary><div class="variable-chips" id="variables"></div><small>Ein Klick kopiert den Variablennamen.</small></details>
@@ -54,9 +54,9 @@
 <dialog id="settingsDialog" aria-labelledby="settingsTitle">
  <div class="dialoghead"><h2 id="settingsTitle">Skriptoptionen</h2><button data-close="settingsDialog" aria-label="Optionen schließen">×</button></div>
  <div class="settings-grid">
-  <label class="check"><input id="previewMode" type="checkbox" checked>Vorschau-Modus: Änderungen durch ShouldProcess überspringen</label>
-  <p class="dialognote">Lesebefehle laufen weiterhin. Für den Echtbetrieb diese Option deaktivieren. Exportierte Skripte unterstützen außerdem <code>-WhatIf</code>. Eigener Code muss mit der passenden Wirkung gekennzeichnet sein.</p>
-  <label class="check"><input id="commentsMode" type="checkbox" checked>Schritte im Code kommentieren</label>
+  <label class="check"><input id="previewMode" type="checkbox" checked>Vorschau-Modus: Änderungen überspringen</label>
+  <p class="dialognote">Lesebefehle laufen weiterhin. Im kurzen Modus werden Änderungen auskommentiert. Für ausführbare Änderungen diese Option deaktivieren. Die Ausgabe mit Skriptgerüst unterstützt zusätzlich <code>-WhatIf</code>. Eigener Code muss mit der passenden Wirkung gekennzeichnet sein.</p>
+  <label class="check"><input id="commentsMode" type="checkbox">Schritte im Code kommentieren</label>
   <label>Optionale Skriptparameter <textarea id="scriptParams" placeholder="[string]$Quellordner = 'C:\Daten'"></textarea></label>
   <label class="check"><input id="transcriptMode" type="checkbox">Konsolenausgabe protokollieren (Start-Transcript)</label>
   <label>Protokollpfad <input id="logPath" value="C:\Daten\PowerHelp.log"></label>

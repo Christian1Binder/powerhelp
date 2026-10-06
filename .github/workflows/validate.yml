@@ -17,6 +17,11 @@ jobs:
       - name: Check syntax with Windows PowerShell 5.1
         shell: powershell
         run: ./tests/validate-powershell.ps1 -CaseFile cases.json
+      - name: Generate extraction examples
+        run: node tests/generate-extraction.js extraction.json
+      - name: Run text and folder extraction with Windows PowerShell 5.1
+        shell: powershell
+        run: ./tests/test-extraction.ps1 -CaseFile extraction.json
       - name: Export Windows command metadata
         shell: powershell
         run: ./tools/Export-PowerHelpCatalog.ps1 -Path catalog.json -EmitCompressed

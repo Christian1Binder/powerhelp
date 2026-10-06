@@ -43,10 +43,10 @@ const PHCatalog = (()=>{
   if(/\[\]$/.test(p.type))return String(v).split(',').map(x=>q(x.trim())).join(', ');
   return q(v);
  }
- function emit(n,d,q){
+ function emit(n,d,q,compact=false){
   const set=setOf(n,d),allowed=new Set((set?.parameters||[]).map(p=>p.name)),args=[];
   for(const p of d.metadata.parameters){const v=n.values[p.name];if(!allowed.has(p.name)||!active(v))continue;if(p.type==='System.Management.Automation.SwitchParameter')args.push('-'+p.name+(v&&typeof v==='object'?':('+v.expr.trim()+')':''));else args.push('-'+p.name+' '+expression(p,v,q));}
-  let body=(n.values._input?'$'+n.values._input.replace(/^\$/,'')+' | ':'')+d.module+'\\'+d.command+(args.length?' '+args.join(' '):'');
+  let body=(n.values._input?'$'+n.values._input.replace(/^\$/,'')+' | ':'')+(compact&&entries.filter(e=>e.command===d.command).length===1?'':d.module+'\\')+d.command+(args.length?' '+args.join(' '):'');
   if(n.out)body='$'+n.out.replace(/^\$/,'')+' = '+body;
   return body;
  }
@@ -67,7 +67,7 @@ const PHCatalog = (()=>{
   return {errors,warnings};
  }
  function defaults(n,d){const set=setOf(n,d);return set?.parameters||[];}
- const hints={files:['where','select','foreach','sort','regex'],read:['replace','split','jsonin','write'],regex:['select','sort','csvout','foreach'],lines:['select','csvout'],csvin:['where','select','foreach','csvout'],where:['select','sort','foreach','csvout'],select:['csvout','jsonout','table'],sort:['select','csvout','table'],users:['where','select','csvout','foreach'],groups:['select','foreach'],services:['where','select','foreach'],events:['where','select','csvout'],jsonin:['select','where','foreach'],foreach:['message']};
+ const hints={files:['where','select','foreach','sort','regex'],read:['regextext','replace','split','jsonin','write'],regextext:['csvout','select','foreach'],regex:['csvout','select','sort','csvout','foreach'],lines:['select','csvout'],csvin:['where','select','foreach','csvout'],where:['select','sort','foreach','csvout'],select:['csvout','jsonout','table'],sort:['select','csvout','table'],users:['where','select','csvout','foreach'],groups:['select','foreach'],services:['where','select','foreach'],events:['where','select','csvout'],jsonin:['select','where','foreach'],foreach:['message']};
  function suggestions(nodes){
   const n=nodes.at(-1);if(!n)return ['files','csvin','regex','users'].map(id=>({id,reason:'Startpunkt für eine typische Aufgabe.'}));
   const d=PH_BY_ID[n.def];let ids=hints[n.def]||[];

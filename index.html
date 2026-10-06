@@ -9,11 +9,13 @@
 
 /* ISE catalog and offline next-step assistance. */
 .tabs{flex-wrap:wrap}.tabs button{min-width:85px;font-size:.85rem}.next-steps{border:1px solid #b6d2e9;background:#e7f2fb;border-radius:8px;padding:.8rem;margin-bottom:1rem}.next-steps h2{margin:0 0 .5rem;font-size:.9rem}.suggestions{display:flex;flex-wrap:wrap;gap:.35rem}.suggestions button{font-size:.8rem;text-align:left}.next-steps small{display:block;font-size:.75rem;color:var(--muted);margin-top:.5rem}.metadata-note{font-size:.8rem;color:var(--muted);border-left:3px solid #63a9d6;padding-left:.6rem}.parameter-picker{grid-column:1/-1;border:1px solid var(--line);padding:.5rem .7rem;border-radius:6px}.parameter-picker summary{cursor:pointer;font-size:.86rem;font-weight:600}.parameter-picker[open]{max-height:330px;overflow:auto}.parameter-picker .check{font-family:Consolas,monospace;font-size:.8rem;overflow-wrap:anywhere}#moduleFilter label{font-size:.8rem;font-weight:600}#moduleFilter{margin:.7rem 0}
+
+.code-options{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:10px 0}.code-options select{flex:1;min-width:180px}.connection{font-size:12px;color:var(--accent,#238a79);padding:6px 0;display:block}
 </style>
 </head>
 <body>
 <header>
- <div class="brand"><span class="logo" aria-hidden="true">&gt;_</span><div><h1>PowerHelp <small>3.0</small></h1><span class="offline">Offline · Windows PowerShell 5.1</span></div></div>
+ <div class="brand"><span class="logo" aria-hidden="true">&gt;_</span><div><h1>PowerHelp <small>3.1</small></h1><span class="offline">Offline · Windows PowerShell 5.1</span></div></div>
  <div class="header-actions"><button id="newProject">Neu</button><button id="importProject">Projekt öffnen</button><button id="saveProject">Projekt speichern</button><button id="regexOpen">Regex-Werkstatt</button><button id="catalogOpen">Server-Katalog</button><button id="settingsOpen">Optionen</button><button id="helpOpen" aria-label="Hilfe">?</button><button class="primary" id="exportScript">.ps1 exportieren</button></div>
 </header>
 <main class="app">
@@ -37,7 +39,7 @@
  </section>
  <section class="preview" aria-label="Skriptvorschau">
   <div class="preview-head"><h2>PowerShell-Code</h2><button id="copyCode">Kopieren</button></div>
-  <small>Die Vorschau folgt deinem Ablauf.</small>
+  <div class="code-options"><label for="codeStyle">Ausgabe</label><select id="codeStyle"><option value="simple">Kurz &amp; verständlich</option><option value="detailed">Mit Skriptgerüst &amp; Absicherung</option></select><small id="codeSize"></small></div>
   <pre class="code" id="code" tabindex="0" aria-label="Generiertes Skript"></pre>
   <details class="collapsible" open><summary id="issuesSummary">Ablaufprüfung</summary><div id="issues" class="issues" aria-live="polite"></div></details>
   <details class="collapsible"><summary>Ausgabevariablen im Ablauf</summary><div class="variable-chips" id="variables"></div><small>Ein Klick kopiert den Variablennamen.</small></details>
@@ -58,9 +60,9 @@
 <dialog id="settingsDialog" aria-labelledby="settingsTitle">
  <div class="dialoghead"><h2 id="settingsTitle">Skriptoptionen</h2><button data-close="settingsDialog" aria-label="Optionen schließen">×</button></div>
  <div class="settings-grid">
-  <label class="check"><input id="previewMode" type="checkbox" checked>Vorschau-Modus: Änderungen durch ShouldProcess überspringen</label>
-  <p class="dialognote">Lesebefehle laufen weiterhin. Für den Echtbetrieb diese Option deaktivieren. Exportierte Skripte unterstützen außerdem <code>-WhatIf</code>. Eigener Code muss mit der passenden Wirkung gekennzeichnet sein.</p>
-  <label class="check"><input id="commentsMode" type="checkbox" checked>Schritte im Code kommentieren</label>
+  <label class="check"><input id="previewMode" type="checkbox" checked>Vorschau-Modus: Änderungen überspringen</label>
+  <p class="dialognote">Lesebefehle laufen weiterhin. Im kurzen Modus werden Änderungen auskommentiert. Für ausführbare Änderungen diese Option deaktivieren. Die Ausgabe mit Skriptgerüst unterstützt zusätzlich <code>-WhatIf</code>. Eigener Code muss mit der passenden Wirkung gekennzeichnet sein.</p>
+  <label class="check"><input id="commentsMode" type="checkbox">Schritte im Code kommentieren</label>
   <label>Optionale Skriptparameter <textarea id="scriptParams" placeholder="[string]$Quellordner = 'C:\Daten'"></textarea></label>
   <label class="check"><input id="transcriptMode" type="checkbox">Konsolenausgabe protokollieren (Start-Transcript)</label>
   <label>Protokollpfad <input id="logPath" value="C:\Daten\PowerHelp.log"></label>
@@ -89,7 +91,7 @@ Datum: 02.10.2026</textarea><div class="dialogcontrols"><label>Textdatei laden <
  * Parameters carry types. Text is always emitted as a single-quoted literal.
  * Expressions are deliberately separate and remain visible as code.
  */
-const PH_VERSION = '3.0.0';
+const PH_VERSION = '3.1.0';
 const PH_CATEGORIES = ['Dateien & Ordner','Text & Regex','CSV & Daten','Benutzer & Gruppen','Berechtigungen & Freigaben','Dienste & Prozesse','Netzwerk','System & Ereignisse','Aufgabenplanung','Active Directory','Skriptlogik'];
 const F = (key,label,type='text',value='',extra={})=>({key,label,type,value,...extra});
 const S = (key,label,value='',extra={})=>F(key,label,'text',value,extra);
@@ -121,7 +123,8 @@ cmd('read','Textdatei lesen',T,'Get-Content','Liest eine Datei als Zeilen oder a
 cmd('write','Textdatei schreiben',T,'Set-Content','Ersetzt den Dateiinhalt durch den angegebenen Wert.',[S('LiteralPath','Dateipfad','C:\\Daten\\ergebnis.txt'),S('Value','Text','Beispieltext'),C('Encoding','Zeichenkodierung',['UTF8','Default','Unicode','ASCII'],'UTF8')],{mutates:true,keywords:'schreiben speichern text ausgabe überschreiben'});
 cmd('append','Text an Datei anhängen',T,'Add-Content','Fügt Text am Ende einer Datei hinzu.',[S('LiteralPath','Dateipfad','C:\\Daten\\protokoll.txt'),S('Value','Text','Eintrag'),C('Encoding','Zeichenkodierung',['UTF8','Default','Unicode','ASCII'],'UTF8')],{mutates:true,keywords:'anhängen append protokoll log'});
 cmd('selectstring','Text in Dateien finden',T,'Select-String','Sucht mit Regex; die Ausgabe enthält unter anderem Dateiname und Zeilennummer.',[S('LiteralPath','Dateipfad','C:\\Daten\\bericht.txt'),S('Pattern','Regex / Suchtext','Fehler|Error'),B('SimpleMatch','Als wörtlichen Text suchen'),B('CaseSensitive','Groß-/Kleinschreibung beachten'),C('Encoding','Zeichenkodierung',['UTF8','Default','Unicode','ASCII'],'UTF8')],{out:'Texttreffer',keywords:'grep suchen regex match zeile fehler auswerten'});
-cmd('regex','Daten mit Regex extrahieren',T,'[regex]::Matches','Sammelt Treffer aus mehreren Textdateien und liest eine benannte oder nummerierte Gruppe aus.',[S('folder','Suchordner','C:\\Daten'),S('filter','Dateimuster','*.txt'),S('pattern','Regulärer Ausdruck','(?m)^Kundennummer:\\s*(?<wert>\\S+)'),S('group','Treffergruppe (0 = gesamter Treffer)','wert'),C('encoding','Zeichenkodierung',['UTF8','Default','Unicode','ASCII'],'UTF8'),B('recurse','Unterordner durchsuchen')],{kind:'regex',out:'Treffer',keywords:'extrahieren auslesen id kundennummer email datum regulärer ausdruck capture gruppen daten'});
+cmd('regex','Daten mit Regex extrahieren',T,'[regex]::Matches','Sammelt Treffer aus mehreren Textdateien und liest eine benannte oder nummerierte Gruppe aus.',[S('folder','Suchordner','C:\\Daten'),S('filter','Dateimuster','*.txt'),S('pattern','Regulärer Ausdruck','(?m)^Kundennummer:\\s*(?<wert>\\S+)'),S('group','Treffergruppe (0 = gesamter Treffer)','wert'),C('encoding','Zeichenkodierung',['UTF8','Default','Unicode','ASCII'],'UTF8'),B('recurse','Unterordner durchsuchen'),B('source','Quelldatei und Trefferposition aufnehmen',true)],{kind:'regex',out:'Treffer',keywords:'extrahieren auslesen id kundennummer email datum regulärer ausdruck capture gruppen daten'});
+cmd('regextext','Regex aus eingelesenem Text',T,'[regex]::Matches','Liest Treffer aus einer vorher eingelesenen Textvariable. Die Spalte Wert kann direkt als CSV gespeichert werden.',[V('input','Textvariable','Text'),S('pattern','Regulärer Ausdruck','(?m)^Kundennummer:\\s*(?<wert>\\S+)'),S('group','Treffergruppe','wert')],{kind:'regextext',out:'Treffer',uses:['input'],keywords:'regex text datei extrahieren kundennummer csv'});
 cmd('replace','Text mit Regex ersetzen',T,'-replace','Ersetzt in einer vorhandenen Textvariablen. Rückverweise wie $1 werden als Text eingetragen.',[V('input','Textvariable','Text'),S('pattern','Regex','\\s+'),S('replacement','Ersetzung',' ',{allowEmpty:true})],{kind:'replace',out:'BereinigterText',uses:['input'],keywords:'replace ersetzen bereinigen austauschen regex'});
 cmd('split','Text aufteilen',T,'-split','Teilt eine Textvariable anhand eines Regex-Trenners auf.',[V('input','Textvariable','Text'),S('pattern','Trenner als Regex',';')],{kind:'split',out:'Teile',uses:['input'],keywords:'split trennen aufteilen zerlegen'});
 cmd('csvin','CSV-Datei einlesen',D,'Import-Csv','Liest Tabellenzeilen als Objekte für Schleifen und Filter.',[S('LiteralPath','CSV-Datei','C:\\Daten\\import.csv'),C('Delimiter','Trennzeichen',[';',',','TAB'],';'),C('Encoding','Zeichenkodierung',['UTF8','Default','Unicode','ASCII'],'UTF8')],{out:'Datensaetze',keywords:'csv import einlesen excel tabelle massenimport'});
@@ -214,6 +217,7 @@ cmd('admove','AD-Objekt in eine OU verschieben',AD,'Move-ADObject','Verschiebt e
 const PH_BY_ID = Object.fromEntries(PH_COMMANDS.map(d=>[d.id,d]));
 function step(def,values={},out,children=[]) { return {def,values,out,children}; }
 const PH_TEMPLATES = [
+ {id:'text-to-csv',title:'Text aus einer Datei als CSV',description:'Datei einlesen, Regex-Treffer extrahieren und die Spalte Wert als CSV speichern. Drei einfache Bausteine.',keywords:'regex daten text datei extrahieren csv kundennummer',steps:[step('read',{},'Text'),step('regextext',{},'Treffer'),step('csvout',{LiteralPath:'C:\\Daten\\ergebnis.csv'},null)]},
  {id:'regex-report',title:'Daten aus Textdateien extrahieren',description:'Kundennummern mit Regex sammeln und mit Quelldatei als CSV exportieren.',keywords:'regex daten auslesen extrahieren kundennummer text txt report',steps:[step('mkdir',{Path:'C:\\Daten\\Export'}),step('regex',{},'Treffer'),step('csvout',{},null)]},
  {id:'old-files',title:'Alte Dateien finden und entfernen',description:'Findet Dateien älter als 90 Tage. Der Vorschau-Modus überspringt das Löschen.',keywords:'alte dateien löschen aufräumen bereinigen älter temp',steps:[step('files',{LiteralPath:'C:\\Temp',Filter:'*',Recurse:true},'Dateien'),step('where',{input:'Dateien',condition:'$_.LastWriteTime -lt (Get-Date).AddDays(-90)'},'AlteDateien'),step('foreach',{input:'AlteDateien',item:'Datei'},null,[step('remove',{LiteralPath:{expr:'$Datei.FullName'}})])]},
  {id:'backup',title:'Ordner mit Robocopy sichern',description:'Kopiert einen Ordner inklusive Unterordnern und prüft den Robocopy-Exitcode.',keywords:'backup sicherung kopieren robocopy unterordner daten',steps:[step('mkdir',{Path:'D:\\Backup'}),step('robocopy',{})]},
@@ -283,10 +287,10 @@ const PHCatalog = (()=>{
   if(/\[\]$/.test(p.type))return String(v).split(',').map(x=>q(x.trim())).join(', ');
   return q(v);
  }
- function emit(n,d,q){
+ function emit(n,d,q,compact=false){
   const set=setOf(n,d),allowed=new Set((set?.parameters||[]).map(p=>p.name)),args=[];
   for(const p of d.metadata.parameters){const v=n.values[p.name];if(!allowed.has(p.name)||!active(v))continue;if(p.type==='System.Management.Automation.SwitchParameter')args.push('-'+p.name+(v&&typeof v==='object'?':('+v.expr.trim()+')':''));else args.push('-'+p.name+' '+expression(p,v,q));}
-  let body=(n.values._input?'$'+n.values._input.replace(/^\$/,'')+' | ':'')+d.module+'\\'+d.command+(args.length?' '+args.join(' '):'');
+  let body=(n.values._input?'$'+n.values._input.replace(/^\$/,'')+' | ':'')+(compact&&entries.filter(e=>e.command===d.command).length===1?'':d.module+'\\')+d.command+(args.length?' '+args.join(' '):'');
   if(n.out)body='$'+n.out.replace(/^\$/,'')+' = '+body;
   return body;
  }
@@ -307,7 +311,7 @@ const PHCatalog = (()=>{
   return {errors,warnings};
  }
  function defaults(n,d){const set=setOf(n,d);return set?.parameters||[];}
- const hints={files:['where','select','foreach','sort','regex'],read:['replace','split','jsonin','write'],regex:['select','sort','csvout','foreach'],lines:['select','csvout'],csvin:['where','select','foreach','csvout'],where:['select','sort','foreach','csvout'],select:['csvout','jsonout','table'],sort:['select','csvout','table'],users:['where','select','csvout','foreach'],groups:['select','foreach'],services:['where','select','foreach'],events:['where','select','csvout'],jsonin:['select','where','foreach'],foreach:['message']};
+ const hints={files:['where','select','foreach','sort','regex'],read:['regextext','replace','split','jsonin','write'],regextext:['csvout','select','foreach'],regex:['csvout','select','sort','csvout','foreach'],lines:['select','csvout'],csvin:['where','select','foreach','csvout'],where:['select','sort','foreach','csvout'],select:['csvout','jsonout','table'],sort:['select','csvout','table'],users:['where','select','csvout','foreach'],groups:['select','foreach'],services:['where','select','foreach'],events:['where','select','csvout'],jsonin:['select','where','foreach'],foreach:['message']};
  function suggestions(nodes){
   const n=nodes.at(-1);if(!n)return ['files','csvin','regex','users'].map(id=>({id,reason:'Startpunkt für eine typische Aufgabe.'}));
   const d=PH_BY_ID[n.def];let ids=hints[n.def]||[];
@@ -351,26 +355,35 @@ const PHCore = (()=>{
  }
  function field(d,n,key) { const f=d.fields.find(f=>f.key===key);return val(f,n.values[key]); }
  const indent = (s,n=1)=>s.split('\n').map(l=>'    '.repeat(n)+l).join('\n');
- function command(n,d){
+ function command(n,d,compact=false){
+  const stop=compact?'':' -ErrorAction Stop';
   const v=n.values, get=k=>field(d,n,k), out=n.out?'$'+name(n.out):'';
   let code;
-  if(d.kind==='ise')return PHCatalog.emit(n,d,q);
-  if(d.kind==='regex') code=`@(foreach ($PHDatei in Get-ChildItem -LiteralPath ${get('folder')} -Filter ${get('filter')} -File${v.recurse?' -Recurse':''} -ErrorAction Stop) {\n    $PHText = [string](Get-Content -LiteralPath $PHDatei.FullName -Raw -Encoding ${get('encoding')} -ErrorAction Stop)\n    foreach ($PHMatch in [regex]::Matches($PHText, ${get('pattern')})) {\n        $PHGruppe = $PHMatch.Groups[${/^\d+$/.test(v.group)?Number(v.group):q(v.group)}]\n        if ($PHGruppe.Success) {\n            [pscustomobject]@{ Datei = $PHDatei.FullName; Wert = $PHGruppe.Value; Position = $PHMatch.Index }\n        }\n    }\n})`;
-  else if(d.kind==='lines') code=`@(foreach ($PHDatei in Get-ChildItem -LiteralPath ${get('folder')} -Filter ${get('filter')} -File -ErrorAction Stop) {\n    $PHZeilen = @(Get-Content -LiteralPath $PHDatei.FullName -Encoding ${get('encoding')} -ErrorAction Stop)\n    foreach ($PHNummer in @(${String(v.lines).split(',').map(x=>Number(x.trim())).join(', ')})) {\n        if ($PHNummer -le $PHZeilen.Count) {\n            [pscustomobject]@{ Datei = $PHDatei.FullName; Zeile = $PHNummer; Wert = $PHZeilen[$PHNummer - 1] }\n        }\n    }\n})`;
-  else if(d.kind==='eventfilter') code=`Get-WinEvent -FilterHashtable @{ LogName = ${get('log')}; Level = ${v.level}; StartTime = (Get-Date).AddDays(-${get('days')}) } -ErrorAction Stop`;
-  else if(d.kind==='remoting') code=`Invoke-Command -ComputerName ${get('ComputerName')} -ScriptBlock {\n${indent(v.ScriptBlock)}\n} -ErrorAction Stop`;
-  else if(d.kind==='localpassword')return `$PHKennwort = Read-Host 'Neues Kennwort' -AsSecureString\nSet-LocalUser -Name ${get('Name')} -Password $PHKennwort -ErrorAction Stop`;
-  else if(d.kind==='adpassword')return `$PHKennwort = Read-Host 'Neues Domänenkennwort' -AsSecureString\nSet-ADAccountPassword -Identity ${get('Identity')} -NewPassword $PHKennwort -Reset -ErrorAction Stop`;
-  else if(d.kind==='adnewuser')return `$PHKennwort = Read-Host 'Kennwort für das neue Domänenkonto' -AsSecureString\nNew-ADUser -Name ${get('Name')} -SamAccountName ${get('SamAccountName')} -UserPrincipalName ${get('UserPrincipalName')} -Path ${get('Path')} -AccountPassword $PHKennwort -Enabled ${v.Enabled?'$true':'$false'} -ErrorAction Stop`;
+  if(d.kind==='ise')return PHCatalog.emit(n,d,q,compact);
+  if(d.kind==='regextext') code=`[regex]::Matches(${get('input')}, ${get('pattern')}) |
+    ForEach-Object { [pscustomobject]@{ Wert = $_.Groups[${/^\d+$/.test(v.group)?Number(v.group):q(v.group)}].Value } }`;
+  else if(compact&&d.kind==='regex') code=`Get-ChildItem -LiteralPath ${get('folder')} -Filter ${get('filter')} -File${v.recurse?' -Recurse':''} |
+    ForEach-Object {
+${v.source?'        $PHDatei = $_\n':''}        $PHText = Get-Content -LiteralPath $_.FullName -Raw -Encoding ${get('encoding')}
+        [regex]::Matches($PHText, ${get('pattern')}) |
+            ForEach-Object { [pscustomobject]@{ ${v.source?'Datei = $PHDatei.FullName; Position = $_.Index; ':''}Wert = $_.Groups[${/^\d+$/.test(v.group)?Number(v.group):q(v.group)}].Value } }
+    }`;
+  else if(d.kind==='regex') code=`@(foreach ($PHDatei in Get-ChildItem -LiteralPath ${get('folder')} -Filter ${get('filter')} -File${v.recurse?' -Recurse':''}${stop}) {\n    $PHText = [string](Get-Content -LiteralPath $PHDatei.FullName -Raw -Encoding ${get('encoding')}${stop})\n    foreach ($PHMatch in [regex]::Matches($PHText, ${get('pattern')})) {\n        $PHGruppe = $PHMatch.Groups[${/^\d+$/.test(v.group)?Number(v.group):q(v.group)}]\n        if ($PHGruppe.Success) {\n            [pscustomobject]@{ Datei = $PHDatei.FullName; Wert = $PHGruppe.Value; Position = $PHMatch.Index }\n        }\n    }\n})`;
+  else if(d.kind==='lines') code=`@(foreach ($PHDatei in Get-ChildItem -LiteralPath ${get('folder')} -Filter ${get('filter')} -File${stop}) {\n    $PHZeilen = @(Get-Content -LiteralPath $PHDatei.FullName -Encoding ${get('encoding')}${stop})\n    foreach ($PHNummer in @(${String(v.lines).split(',').map(x=>Number(x.trim())).join(', ')})) {\n        if ($PHNummer -le $PHZeilen.Count) {\n            [pscustomobject]@{ Datei = $PHDatei.FullName; Zeile = $PHNummer; Wert = $PHZeilen[$PHNummer - 1] }\n        }\n    }\n})`;
+  else if(d.kind==='eventfilter') code=`Get-WinEvent -FilterHashtable @{ LogName = ${get('log')}; Level = ${v.level}; StartTime = (Get-Date).AddDays(-${get('days')}) }${stop}`;
+  else if(d.kind==='remoting') code=`Invoke-Command -ComputerName ${get('ComputerName')} -ScriptBlock {\n${indent(v.ScriptBlock)}\n}${stop}`;
+  else if(d.kind==='localpassword')return `$PHKennwort = Read-Host 'Neues Kennwort' -AsSecureString\nSet-LocalUser -Name ${get('Name')} -Password $PHKennwort${stop}`;
+  else if(d.kind==='adpassword')return `$PHKennwort = Read-Host 'Neues Domänenkennwort' -AsSecureString\nSet-ADAccountPassword -Identity ${get('Identity')} -NewPassword $PHKennwort -Reset${stop}`;
+  else if(d.kind==='adnewuser')return `$PHKennwort = Read-Host 'Kennwort für das neue Domänenkonto' -AsSecureString\nNew-ADUser -Name ${get('Name')} -SamAccountName ${get('SamAccountName')} -UserPrincipalName ${get('UserPrincipalName')} -Path ${get('Path')} -AccountPassword $PHKennwort -Enabled ${v.Enabled?'$true':'$false'}${stop}`;
   else if(d.kind==='where')code=`${get('input')} | Where-Object { ${get('condition')} }`;
   else if(d.kind==='replace')code=`${get('input')} -replace ${get('pattern')}, ${get('replacement')}`;
   else if(d.kind==='split')code=`${get('input')} -split ${get('pattern')}`;
   else if(d.kind==='variable')return `${out} = ${get('value')}`;
   else if(d.kind==='custom')return v.code;
-  else if(d.kind==='newuser')return `$PHKennwort = Read-Host ${q('Kennwort für das neue Konto')} -AsSecureString\nNew-LocalUser -Name ${get('Name')} -FullName ${get('FullName')}${v.Description?' -Description '+get('Description'):''} -Password $PHKennwort${v.PasswordNeverExpires?' -PasswordNeverExpires':''} -ErrorAction Stop | Out-Null`;
+  else if(d.kind==='newuser')return `$PHKennwort = Read-Host ${q('Kennwort für das neue Konto')} -AsSecureString\nNew-LocalUser -Name ${get('Name')} -FullName ${get('FullName')}${v.Description?' -Description '+get('Description'):''} -Password $PHKennwort${v.PasswordNeverExpires?' -PasswordNeverExpires':''}${stop} | Out-Null`;
   else if(d.kind==='robocopy')return `& robocopy.exe ${get('source')} ${get('target')} ${v.mirror?'/MIR':v.recurse?'/E':''} /COPY:DAT /DCOPY:DAT /R:${get('retries')} /W:${get('wait')}\nif ($LASTEXITCODE -ge 8) { throw "Robocopy fehlgeschlagen: Exitcode $LASTEXITCODE" }`;
-  else if(d.kind==='aclgrant')return `$PHAcl = Get-Acl -LiteralPath ${get('path')} -ErrorAction Stop\n$PHRegel = New-Object System.Security.AccessControl.FileSystemAccessRule(${get('identity')}, ${get('rights')}, ${q(v.inherit?'ContainerInherit, ObjectInherit':'None')}, 'None', 'Allow')\n$PHAcl.AddAccessRule($PHRegel)\nSet-Acl -LiteralPath ${get('path')} -AclObject $PHAcl -ErrorAction Stop`;
-  else if(d.kind==='tasknew')return `$PHAktion = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument ${q('-NoProfile -File "'+String(v.script).replace(/"/g,'')+'"')}\n$PHTrigger = New-ScheduledTaskTrigger -Daily -At ${get('time')}\n$PHIdentitaet = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name\n$PHPrincipal = New-ScheduledTaskPrincipal -UserId $PHIdentitaet -LogonType Interactive -RunLevel Limited\nRegister-ScheduledTask -TaskName ${get('name')} -Action $PHAktion -Trigger $PHTrigger -Principal $PHPrincipal -ErrorAction Stop | Out-Null`;
+  else if(d.kind==='aclgrant')return `$PHAcl = Get-Acl -LiteralPath ${get('path')}${stop}\n$PHRegel = New-Object System.Security.AccessControl.FileSystemAccessRule(${get('identity')}, ${get('rights')}, ${q(v.inherit?'ContainerInherit, ObjectInherit':'None')}, 'None', 'Allow')\n$PHAcl.AddAccessRule($PHRegel)\nSet-Acl -LiteralPath ${get('path')} -AclObject $PHAcl${stop}`;
+  else if(d.kind==='tasknew')return `$PHAktion = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument ${q('-NoProfile -File "'+String(v.script).replace(/"/g,'')+'"')}\n$PHTrigger = New-ScheduledTaskTrigger -Daily -At ${get('time')}\n$PHIdentitaet = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name\n$PHPrincipal = New-ScheduledTaskPrincipal -UserId $PHIdentitaet -LogonType Interactive -RunLevel Limited\nRegister-ScheduledTask -TaskName ${get('name')} -Action $PHAktion -Trigger $PHTrigger -Principal $PHPrincipal${stop} | Out-Null`;
   else {
    let args=[];
    for(const f of d.fields){
@@ -380,15 +393,22 @@ const PHCore = (()=>{
     if(f.type==='bool'){ if(value)args.push('-'+f.key); }
     else args.push('-'+f.key+' '+val(f,value));
    }
-   code=(d.inputField?get(d.inputField)+' | ':'')+d.command+(args.length?' '+args.join(' '):'')+' -ErrorAction Stop';
+   code=(d.inputField?get(d.inputField)+' | ':'')+d.command+(args.length?' '+args.join(' '):'')+stop;
    if(d.id==='mkdir')code+=' | Out-Null';
   }
   return out?out+' = '+code:code;
  }
  function allNodes(steps){return steps.flatMap(n=>[n,...allNodes(n.children||[])]);}
+ function sourcesBefore(steps,uid){
+  function visit(nodes,scope){for(const n of nodes){if(n.uid===uid)return scope;const inner=visit(n.children||[],scope.slice());if(inner)return inner;if(n.out)scope=[...scope,n];}return null;}
+  return visit(steps,[])||[];
+ }
+ function connectMatching(steps){for(const n of allNodes(steps)){const d=PH_BY_ID[n.def];for(const key of [...(d.uses||[]),...(d.kind==='ise'?['_input']:[])]){if(n.links?.[key])continue;const source=sourcesBefore(steps,n.uid).findLast(s=>name(s.out).toLowerCase()===name(n.values[key]).toLowerCase());if(source){n.links??={};n.links[key]=source.uid;}}}return steps;}
  function compile(project){
   const errors=[],warnings=[],modules=new Set(), defined=new Set(['true','false','null','_','PSItem','PSCmdlet','WhatIfPreference','ErrorActionPreference','LASTEXITCODE','args','input','PSBoundParameters','PSScriptRoot','PSCommandPath']);
-  const settings=project.settings||{};
+  const settings=project.settings||{}, compact=settings.style!=='detailed';
+  project={...project,steps:clone(project.steps||[])};
+  for(const n of allNodes(project.steps)){const d=PH_BY_ID[n.def];for(const [key,uid] of Object.entries(n.links||{})){if(!d||!((d.uses||[]).includes(key)||(d.kind==='ise'&&key==='_input'))){errors.push({uid:n.uid,text:'Ungültige Eingabeverbindung.'});continue;}const source=sourcesBefore(project.steps,n.uid).find(s=>s.uid===uid);if(!source||!source.out){errors.push({uid:n.uid,text:'Die verbundene Quelle fehlt oder steht nicht mehr vor diesem Schritt.'});}else n.values[key]=name(source.out);}}
   const parameters=String(settings.params||'').trim();
   for(const match of parameters.matchAll(/\$([A-Za-z_][\w]*)/g))defined.add(match[1]);
   const has= (set,v)=>[...set].some(x=>x.toLowerCase()===name(v).toLowerCase());
@@ -396,7 +416,7 @@ const PHCore = (()=>{
    for(const n of nodes){
     const d=Object.hasOwn(PH_BY_ID,n.def)?PH_BY_ID[n.def]:null; if(!d){errors.push({uid:n.uid,text:'Unbekannter Baustein.'});continue;}
     if(d.module&&d.module!=='Microsoft.PowerShell.Core')modules.add(d.module);
-    if(d.kind==='ise'){const check=PHCatalog.issues(n,d,scope);for(const text of check.errors)errors.push({uid:n.uid,text});for(const text of check.warnings)warnings.push({uid:n.uid,text});}
+    if(d.kind==='ise'){const check=PHCatalog.issues(n,d,scope);for(const text of check.errors)errors.push({uid:n.uid,text});for(const text of check.warnings.filter(t=>settings.preview||!t.includes('im Vorschau-Modus')))warnings.push({uid:n.uid,text});}
     for(const f of d.fields){
      const v=n.values[f.key],txt=valueText(v);
      if(f.type!=='bool'&&!f.optional&&!f.allowEmpty&&!txt.trim())errors.push({uid:n.uid,text:`${d.title}: „${f.label}“ fehlt.`});
@@ -415,7 +435,7 @@ const PHCore = (()=>{
     if(['copy','move'].includes(d.id)&&!isExpr(n.values.LiteralPath)&&!isExpr(n.values.Destination)&&String(n.values.LiteralPath).toLowerCase()===String(n.values.Destination).toLowerCase())errors.push({uid:n.uid,text:`${d.title}: Quelle und Ziel sind identisch.`});
     if(d.id==='files'&&n.values.File&&n.values.Directory)errors.push({uid:n.uid,text:'Dateisuche: „Nur Dateien“ und „Nur Ordner“ schließen sich aus.'});
     if(d.kind==='lines'&&!/^\s*[1-9]\d{0,5}(?:\s*,\s*[1-9]\d{0,5})*\s*$/.test(n.values.lines))errors.push({uid:n.uid,text:'Zeilenextraktion: Positive Zeilennummern wie 4, 9 angeben.'});
-    if(d.kind==='regex'&&!/^(?:0|[1-9]\d{0,3}|[A-Za-z_][A-Za-z0-9_]*)$/.test(n.values.group))errors.push({uid:n.uid,text:'Regex: Gruppe muss eine Zahl oder ein Gruppenname sein.'});
+    if(['regex','regextext'].includes(d.kind)&&!/^(?:0|[1-9]\d{0,3}|[A-Za-z_][A-Za-z0-9_]*)$/.test(n.values.group))errors.push({uid:n.uid,text:'Regex: Gruppe muss eine Zahl oder ein Gruppenname sein.'});
     if(d.kind==='tasknew'&&!/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(n.values.time))errors.push({uid:n.uid,text:'Aufgabenplanung: Uhrzeit im Format HH:mm zwischen 00:00 und 23:59 angeben.'});
     if(d.kind==='tasknew'&&/["\r\n]/.test(n.values.script))errors.push({uid:n.uid,text:'Aufgabenplanung: Skriptpfad enthält ein ungültiges Zeichen.'});
     if(d.id==='regwrite'&&['DWord','QWord'].includes(n.values.PropertyType)&&!isExpr(n.values.Value)&&!/^\d+$/.test(n.values.Value))errors.push({uid:n.uid,text:'Registry: Für DWord/QWord einen nicht negativen ganzzahligen Wert angeben.'});
@@ -452,26 +472,28 @@ const PHCore = (()=>{
     if(d.kind==='foreach')body=`foreach ($${name(n.values.item)} in $${name(n.values.input)}) {\n${indent(children)}\n}`;
     else if(d.kind==='if')body=`if (${n.values.condition}) {\n${indent(children)}\n}`;
     else if(d.kind==='try')body=`try {\n${indent(children)}\n} catch {\n    Write-Error $_\n    throw\n}`;
-    else if(d.kind==='function')body=`function ${n.values.name} {\n    [CmdletBinding(SupportsShouldProcess = $true)]\n    param(${n.values.params||''})\n${indent(children)}\n}`;
-   }else body=command(n,d);
+    else if(d.kind==='function')body=`function ${n.values.name} {\n${compact?'':'    [CmdletBinding(SupportsShouldProcess = $true)]\n'}${n.values.params||!compact?'    param('+(n.values.params||'')+')\n':''}\n${indent(children)}\n}`;
+   }else body=command(n,d,compact);
    const mutates=(d.kind==='ise'&&n.values._effect!=='Nur lesen')||d.mutates||(['custom','remoting'].includes(d.kind)&&n.values.effect==='Änderung');
-   if(mutates){
+   if(mutates&&compact&&settings.preview){body='# Vorschau: '+d.title+' wird übersprungen.\n'+body.split('\n').map(l=>'# '+l).join('\n');}
+   else if(mutates&&!compact){
     const targetKey=['LiteralPath','Path','Name','Identity','source','path','name','Group','FilePath','DisplayName'].find(k=>n.values[k]!==undefined&&n.values[k]!==''&&n.values[k]!==false);
     const target=targetKey?field(d,n,targetKey):q(d.kind==='ise'?d.command:'Eigener Code');
     body=`if ($PSCmdlet.ShouldProcess([string](${target}), ${q(d.title)})) {\n${indent(body)}\n}`;
    }
-   return (settings.comments!==false?'# '+d.title+'\n':'')+body;
-  }).join('\n\n');}
-  const header=['#requires -Version 5.1'];
-  if(modules.size)header.push('#requires -Modules '+[...modules].map(q).join(', '));
-  header.push('# Erstellt mit PowerHelp '+PH_VERSION+' · Windows PowerShell 5.1','[CmdletBinding(SupportsShouldProcess = $true)]','param('+parameters+')',"$ErrorActionPreference = 'Stop'");
-  if(settings.preview)header.push('$WhatIfPreference = $true # Änderungen mit ShouldProcess werden übersprungen.');
+   return ((settings.comments===true||(!compact&&settings.comments!==false))?'# '+d.title+'\n':'')+body;
+  }).join(compact?'\n':'\n\n');}
+  const header=compact?[]:['#requires -Version 5.1'];
+  if(!compact&&modules.size)header.push('#requires -Modules '+[...modules].map(q).join(', '));
+  if(!compact)header.push('# Erstellt mit PowerHelp '+PH_VERSION+' · Windows PowerShell 5.1','[CmdletBinding(SupportsShouldProcess = $true)]','param('+parameters+')',"$ErrorActionPreference = 'Stop'");
+  if(!compact&&settings.preview)header.push('$WhatIfPreference = $true # Änderungen mit ShouldProcess werden übersprungen.');
+  if(compact&&parameters)header.push('param('+parameters+')');
   const body=emit(project.steps||[]);
-  let code=header.join('\n')+'\n\n'+body+'\n';
+  let code=(header.length?header.join('\n')+'\n\n':'')+body+'\n';
   if(settings.transcript){code=header.join('\n')+'\n\n'+`Start-Transcript -LiteralPath ${q(settings.logPath||'C:\\Daten\\PowerHelp.log')} -Append -ErrorAction Stop\ntry {\n${indent(body)}\n} finally {\n    Stop-Transcript | Out-Null\n}\n`;warnings.push({uid:null,text:'Transkript: Der Protokollpfad muss erreichbar sein; das Protokoll wird auch im Vorschau-Modus geschrieben.'});}
   if(modules.has('Microsoft.PowerShell.LocalAccounts'))warnings.push({uid:null,text:'Lokale Konten: LocalAccounts ist auf Domänencontrollern und in 32-Bit-PowerShell auf einem 64-Bit-System nicht verfügbar.'});
   if(modules.has('ActiveDirectory'))warnings.push({uid:null,text:'Active Directory erfordert das bereits vorhandene AD-Modul und eine erreichbare Domäne. PowerHelp installiert nichts.'});
-  if(allNodes(project.steps||[]).some(n=>PH_BY_ID[n.def]?.mutates)&&!settings.preview)warnings.push({uid:null,text:'Echtbetrieb: Dieses Skript enthält Änderungen. Vorschau-Modus aktivieren oder das gespeicherte Skript mit -WhatIf starten.'});
+  if(allNodes(project.steps||[]).some(n=>PH_BY_ID[n.def]?.mutates)&&!settings.preview)warnings.push({uid:null,text:'Echtbetrieb: Dieses Skript enthält Änderungen. Vorschau-Modus aktivieren und die Änderungen vor dem Ausführen prüfen.'});
   return {code,errors,warnings:[...new Map(warnings.map(w=>[w.uid+'|'+w.text,w])).values()],modules:[...modules],count:allNodes(project.steps||[]).length};
  }
  function normalize(s){return String(s).toLowerCase().replace(/ä/g,'a').replace(/ö/g,'o').replace(/ü/g,'u').replace(/ß/g,'ss').normalize('NFD').replace(/[\u0300-\u036f]/g,'');}
@@ -496,12 +518,12 @@ const PHCore = (()=>{
  function validateProject(data){
   if(!data||data.format!=='powerhelp-project'||data.version!==2||!Array.isArray(data.steps))throw Error('Keine unterstützte PowerHelp-Projektdatei (Version 2).');
   let count=0;
-  function check(nodes,depth=0){if(depth>12)throw Error('Zu viele verschachtelte Blöcke.');return nodes.map(n=>{if(++count>500)throw Error('Maximal 500 Schritte pro Projekt.');const d=Object.hasOwn(PH_BY_ID,n.def)?PH_BY_ID[n.def]:null;if(!d||typeof n.values!=='object'||n.values===null)throw Error('Ungültiger Baustein.');for(const f of d.fields){const v=n.values[f.key];if(d.kind==='ise'&&f.key.startsWith('_')&&v!==undefined&&typeof v!=='string')throw Error('Ungültige Katalogsteuerung.');if(v!==undefined && !(typeof v==='string'||typeof v==='boolean'||typeof v==='number'||isExpr(v)))throw Error('Ungültiger Feldwert.');if(valueText(v).length>200000)throw Error('Ein Feld ist zu groß.');}if(n.children!==undefined&&!Array.isArray(n.children))throw Error('Ungültiger Block.');return makeNode(n.def,n.values,typeof n.out==='string'?n.out:undefined,check(n.children||[],depth+1));});}
+  function check(nodes,depth=0){if(depth>12)throw Error('Zu viele verschachtelte Blöcke.');return nodes.map(n=>{if(++count>500)throw Error('Maximal 500 Schritte pro Projekt.');const d=Object.hasOwn(PH_BY_ID,n.def)?PH_BY_ID[n.def]:null;if(!d||typeof n.values!=='object'||n.values===null)throw Error('Ungültiger Baustein.');for(const f of d.fields){const v=n.values[f.key];if(d.kind==='ise'&&f.key.startsWith('_')&&v!==undefined&&typeof v!=='string')throw Error('Ungültige Katalogsteuerung.');if(v!==undefined && !(typeof v==='string'||typeof v==='boolean'||typeof v==='number'||isExpr(v)))throw Error('Ungültiger Feldwert.');if(valueText(v).length>200000)throw Error('Ein Feld ist zu groß.');}if(n.children!==undefined&&!Array.isArray(n.children))throw Error('Ungültiger Block.');const result=makeNode(n.def,n.values,typeof n.out==='string'?n.out:undefined);result.children=check(n.children||[],depth+1);if(typeof n.uid==='string'&&/^[a-zA-Z0-9_-]{1,80}$/.test(n.uid))result.uid=n.uid;if(n.links!==undefined){if(!n.links||typeof n.links!=='object'||Array.isArray(n.links)||Object.values(n.links).some(v=>typeof v!=='string'))throw Error('Ungültige Verbindungen.');result.links=clone(n.links);}return result;});}
   const catalog=data.catalog?PHCatalog.validate(data.catalog):null,previous=PHCatalog.current();let steps;
-  try{PHCatalog.install(catalog||PH_BUILTIN_CATALOG);steps=check(data.steps);}catch(e){PHCatalog.install(previous||PH_BUILTIN_CATALOG);throw e;}const s=data.settings||{};
-  return {format:'powerhelp-project',version:2,...(catalog?{catalog}:{}),title:String(data.title||'Mein Skript').slice(0,150),steps,settings:{preview:s.preview!==false,comments:s.comments!==false,params:String(s.params||'').slice(0,10000),transcript:!!s.transcript,logPath:String(s.logPath||'C:\\Daten\\PowerHelp.log').slice(0,2000)}};
+  try{PHCatalog.install(catalog||PH_BUILTIN_CATALOG);steps=check(data.steps);if(new Set(allNodes(steps).map(n=>n.uid)).size!==allNodes(steps).length)throw Error('Doppelte Schrittkennungen.');connectMatching(steps);}catch(e){PHCatalog.install(previous||PH_BUILTIN_CATALOG);throw e;}const s=data.settings||{};
+  return {format:'powerhelp-project',version:2,...(catalog?{catalog}:{}),title:String(data.title||'Mein Skript').slice(0,150),steps,settings:{style:s.style==='detailed'?'detailed':'simple',preview:s.preview!==false,comments:s.style?s.comments===true:false,params:String(s.params||'').slice(0,10000),transcript:!!s.transcript,logPath:String(s.logPath||'C:\\Daten\\PowerHelp.log').slice(0,2000)}};
  }
- return {q,name,validName,clone,makeNode,allNodes,compile,search,normalize,isExpr,valueText,validateProject};
+ return {sourcesBefore,connectMatching,q,name,validName,clone,makeNode,allNodes,compile,search,normalize,isExpr,valueText,validateProject};
 })();
 
 /* Browser UI. All text derived from projects is inserted with textContent. */
@@ -510,11 +532,12 @@ const PHCore = (()=>{
 const $=id=>document.getElementById(id);
 const dom=(tag,attrs={},text)=>{const el=document.createElement(tag);for(const [k,v]of Object.entries(attrs)){if(k==='class')el.className=v;else if(k==='type')el.type=v;else el.setAttribute(k,v);}if(text!==undefined)el.textContent=text;return el;};
 const initialHtml='<!doctype html>\n'+document.documentElement.outerHTML;
-let project={format:'powerhelp-project',version:2,title:'Dateibestand dokumentieren',settings:{preview:true,comments:true,params:'',transcript:false,logPath:'C:\\Daten\\PowerHelp.log'},steps:PH_TEMPLATES.find(t=>t.id==='file-report').steps.map(s=>PHCore.makeNode(s.def,s.values,s.out,s.children))};
+let project={format:'powerhelp-project',version:2,title:'Dateibestand dokumentieren',settings:{style:'simple',preview:true,comments:false,params:'',transcript:false,logPath:'C:\\Daten\\PowerHelp.log'},steps:PH_TEMPLATES.find(t=>t.id==='file-report').steps.map(s=>PHCore.makeNode(s.def,s.values,s.out,s.children))};
 let moduleName='Alle', searchTimer;
 let tab='commands',category='Alle',query='',limit=30,insertUid=null,selectedUid=null,openIds=new Set(),dragUid=null;
 let lastResult,saveTimer,toastTimer,worker=null,regexRows=[],undoStack=[],redoStack=[];
 try{const raw=localStorage.getItem('powerhelp-v2');if(raw)project=PHCore.validateProject(JSON.parse(raw));}catch{$('autosave').textContent='Gespeichertes Projekt nicht geladen';}
+PHCore.connectMatching(project.steps);
 const snapshot=()=>JSON.stringify(project);
 function checkpoint(){undoStack.push(snapshot());if(undoStack.length>40)undoStack.shift();redoStack=[];}
 function changed(){renderPreview();clearTimeout(saveTimer);saveTimer=setTimeout(()=>{try{localStorage.setItem('powerhelp-v2',snapshot());$('autosave').textContent='Lokal gespeichert';}catch{$('autosave').textContent='Speicherung gesperrt · Projekt exportieren';}},200);}
@@ -524,11 +547,11 @@ function findList(uid,nodes=project.steps){if(nodes.some(n=>n.uid===uid))return 
 function targetList(){const n=insertUid?findNode(insertUid):null;if(n&&PH_BY_ID[n.def].container)return n.children;insertUid=null;return project.steps;}
 function uniqueOutput(out){const names=PHCore.allNodes(project.steps).map(n=>n.out.toLowerCase());let result=out,i=2;while(result&&names.includes(result.toLowerCase()))result=out+(i++);return result;}
 function addCommand(id,values={}){checkpoint();const d=PH_BY_ID[id];const n=PHCore.makeNode(id,values,uniqueOutput(d.out||''));
- const available=PHCore.allNodes(project.steps).filter(s=>s.out).map(s=>s.out);
- if(insertUid){const parent=findNode(insertUid);if(parent?.def==='foreach')available.push(parent.values.item);}
- if(available.length)for(const f of d.fields)if((d.uses||[]).includes(f.key)&&!Object.hasOwn(values,f.key))n.values[f.key]=available.at(-1);
- targetList().push(n);selectedUid=n.uid;openIds.add(n.uid);renderSteps();changed();toast('Baustein hinzugefügt');}
-function applyTemplate(t,replace){if(replace&&project.steps.length&&!confirm('Diesen Ablauf als neues Projekt laden? Das aktuelle Projekt vorher speichern, wenn du es behalten möchtest.'))return;checkpoint();const nodes=t.steps.map(s=>PHCore.makeNode(s.def,s.values,s.out,s.children));if(replace){project.steps=nodes;project.title=t.title;insertUid=null;openIds.clear();}else targetList().push(...nodes);selectedUid=nodes[0]?.uid;openIds.add(selectedUid);renderAll();changed();toast(replace?'Ablauf geladen':'Ablauf angehängt');}
+ targetList().push(n);
+ const sources=PHCore.sourcesBefore(project.steps,n.uid);
+ for(const key of [...(d.uses||[]),...(d.kind==='ise'?['_input']:[])]){const source=Object.hasOwn(values,key)?sources.findLast(s=>s.out===values[key]):sources.at(-1);if(source){n.values[key]=source.out;n.links??={};n.links[key]=source.uid;}}
+ selectedUid=n.uid;openIds.add(n.uid);renderSteps();changed();toast('Baustein hinzugefügt');}
+function applyTemplate(t,replace){if(replace&&project.steps.length&&!confirm('Diesen Ablauf als neues Projekt laden? Das aktuelle Projekt vorher speichern, wenn du es behalten möchtest.'))return;checkpoint();const nodes=t.steps.map(s=>PHCore.makeNode(s.def,s.values,s.out,s.children));if(replace){project.steps=nodes;project.title=t.title;insertUid=null;openIds.clear();}else targetList().push(...nodes);PHCore.connectMatching(project.steps);selectedUid=nodes[0]?.uid;openIds.add(selectedUid);renderAll();changed();toast(replace?'Ablauf geladen':'Ablauf angehängt');}
 function renderLibrary(){
  const root=$('results');root.replaceChildren();const items=tab==='commands'?PH_COMMANDS:tab==='ise'?PHCatalog.entries.filter(d=>moduleName==='Alle'||d.module===moduleName):PH_TEMPLATES;
  const matches=PHCore.search(query,items,tab==='commands'?category:'Alle');
@@ -553,19 +576,19 @@ function renderSteps(){
   const list=dom('div');nodes.forEach((n,index)=>{
    const d=PH_BY_ID[n.def],number=prefix+(index+1),details=dom('details',{class:'step'+(n.uid===selectedUid?' selected':''),id:n.uid});details.open=openIds.has(n.uid);
    details.addEventListener('toggle',()=>{if(details.open)openIds.add(n.uid);else openIds.delete(n.uid);});
-   const summary=dom('summary');summary.append(dom('span',{class:'stepnum'},number));const label=dom('span',{class:'steplabel'});label.append(dom('strong',{},d.title),dom('code',{},d.command+(n.out?' → $'+n.out:'')));summary.append(label);
+   const summary=dom('summary');summary.append(dom('span',{class:'stepnum'},number));const label=dom('span',{class:'steplabel'});label.append(dom('strong',{},d.title),dom('code',{},Object.values(n.links||{}).map(uid=>PHCore.allNodes(project.steps).find(s=>s.uid===uid)?.out).filter(Boolean).map(out=>'$'+out+' → ').join('')+d.command+(n.out?' → $'+n.out:'')));summary.append(label);
    const actions=dom('span',{class:'step-actions'});
    const action=(text,description,handler,disabled=false)=>{const b=dom('button',{type:'button','aria-label':description},text);b.disabled=disabled;b.onclick=e=>{e.preventDefault();e.stopPropagation();handler();};actions.append(b);};
    action('↑',d.title+' nach oben',()=>{checkpoint();[nodes[index-1],nodes[index]]=[nodes[index],nodes[index-1]];renderSteps();changed();},index===0);
    action('↓',d.title+' nach unten',()=>{checkpoint();[nodes[index],nodes[index+1]]=[nodes[index+1],nodes[index]];renderSteps();changed();},index===nodes.length-1);
-   action('⧉',d.title+' duplizieren',()=>{checkpoint();const copy=PHCore.makeNode(n.def,n.values,uniqueOutput(n.out),n.children);nodes.splice(index+1,0,copy);openIds.add(copy.uid);renderSteps();changed();});
+   action('⧉',d.title+' duplizieren',()=>{checkpoint();const copy=PHCore.makeNode(n.def,n.values,uniqueOutput(n.out),n.children);copy.links=PHCore.clone(n.links||{});nodes.splice(index+1,0,copy);PHCore.connectMatching(project.steps);openIds.add(copy.uid);renderSteps();changed();});
    action('×',d.title+' entfernen',()=>{checkpoint();nodes.splice(index,1);if(insertUid===n.uid)insertUid=null;renderSteps();changed();});
    summary.append(actions);details.append(summary);summary.draggable=true;summary.addEventListener('dragstart',e=>{dragUid=n.uid;e.dataTransfer.setData('text/plain',n.uid);});
    summary.addEventListener('dragover',e=>{if(dragUid&&findList(dragUid)===nodes){e.preventDefault();details.classList.add('dragover');}});summary.addEventListener('dragleave',()=>details.classList.remove('dragover'));
    summary.addEventListener('drop',e=>{e.preventDefault();details.classList.remove('dragover');if(!dragUid||dragUid===n.uid||findList(dragUid)!==nodes)return;checkpoint();const from=nodes.findIndex(s=>s.uid===dragUid),to=nodes.findIndex(s=>s.uid===n.uid);const [moved]=nodes.splice(from,1);nodes.splice(to,0,moved);dragUid=null;renderSteps();changed();});
    const body=dom('div',{class:'step-body'});body.append(dom('p',{class:'description'},d.description));const fields=dom('div',{class:'fields'});
    if(d.kind==='ise')drawIseFields(n,d,body,fields);else for(const f of d.fields)fields.append(drawField(n,d,f));body.append(fields);
-   if(d.out){const field=dom('div',{class:'field outfield'}),id=n.uid+'-out';field.append(dom('label',{class:'fieldlabel',for:id},d.kind==='ise'?'Ausgabevariable (optional, ohne $)':'Ausgabevariable (ohne $)'));const input=dom('input',{id,type:'text'});input.value=n.out;input.addEventListener('focus',checkpoint,{once:true});input.oninput=()=>{n.out=input.value;changed();};field.append(input);body.append(field);}
+   if(d.out){const field=dom('div',{class:'field outfield'}),id=n.uid+'-out';field.append(dom('label',{class:'fieldlabel',for:id},d.kind==='ise'?'Ausgabevariable (optional, ohne $)':'Ausgabevariable (ohne $)'));const input=dom('input',{id,type:'text'});input.value=n.out;input.addEventListener('focus',checkpoint,{once:true});input.oninput=()=>{n.out=input.value;changed();};input.onchange=()=>{renderSteps();changed();};field.append(input);body.append(field);}
    if(d.container){const tools=dom('div',{class:'block-tools'}),b=dom('button',{},'In diesen Block einfügen');b.onclick=()=>{insertUid=n.uid;selectedUid=n.uid;openIds.add(n.uid);renderSteps();$('search').focus();};tools.append(b);body.append(tools);const children=dom('div',{class:'children'});if(n.children.length)children.append(draw(n.children,number+'.'));else children.append(dom('div',{class:'empty'},'Hier erscheinen die Schritte innerhalb dieses Blocks.'));body.append(children);}
    const issue=dom('div',{id:n.uid+'-error',class:'step-error'});issue.hidden=true;body.append(issue);details.append(body);list.append(details);
   });return list;
@@ -582,7 +605,18 @@ function drawField(n,d,f){
  if((['text','list','number'].includes(f.type)||(d.kind==='ise'&&['enum','bool'].includes(f.type)))&&!(d.kind==='regex'&&['pattern','group'].includes(f.key))&&d.kind!=='tasknew'&&!f.key.startsWith('_')){
   const toggle=dom('button',{type:'button',class:expression?'active':'','aria-label':f.label+' als '+(expression?'Text':'Ausdruck')},'fx');toggle.onclick=()=>{checkpoint();n.values[f.key]=expression?n.values[f.key].expr:{expr:PHCore.valueText(n.values[f.key])};openIds.add(n.uid);renderSteps();changed();};heading.append(toggle);
  }
- root.append(heading);let input;
+ root.append(heading);
+ const linkable=(d.uses||[]).includes(f.key)||(d.kind==='ise'&&f.key==='_input');
+ if(linkable){
+  const sources=PHCore.sourcesBefore(project.steps,n.uid),select=dom('select',{id:id+'-source','aria-label':f.label+' aus vorherigem Schritt'});
+  select.append(dom('option',{value:''},'Variable selbst eingeben'));
+  for(const source of sources)select.append(dom('option',{value:source.uid},PH_BY_ID[source.def].title+' → $'+source.out));
+  const linked=n.links?.[f.key];if(linked&&!sources.some(s=>s.uid===linked))select.append(dom('option',{value:linked},'⚠ Verbundene Quelle fehlt / steht später'));
+  select.value=linked||'';
+  select.onchange=()=>{checkpoint();n.links??={};if(select.value){n.links[f.key]=select.value;n.values[f.key]=sources.find(s=>s.uid===select.value).out;}else delete n.links[f.key];renderSteps();changed();};root.append(select);
+  if(linked){const source=sources.find(s=>s.uid===linked);root.append(dom('span',{class:'connection'},source?'↳ Verknüpft mit $'+source.out+' · Umbenennen wird übernommen':'Quelle zuerst wieder vor diesen Schritt setzen.'));return root;}
+ }
+ let input;
  if(f.type==='enum'&&!expression){input=dom('select',{id});if(f.optional)input.append(dom('option',{value:''},'Nicht verwenden'));for(const option of f.options)input.append(dom('option',{value:option},option==='TAB'?'Tabulator':option));input.value=n.values[f.key];}
  else if(f.type==='expr'){input=dom('textarea',{id,spellcheck:'false'});input.value=n.values[f.key];}
  else{input=dom('input',{id,type:f.type==='number'&&!expression?'number':'text',autocomplete:'off'});input.value=PHCore.valueText(n.values[f.key]);if(f.type==='number'&&!expression){input.min=f.min??0;input.max=f.max??1000000;}}
@@ -593,7 +627,7 @@ function drawField(n,d,f){
  if(note)root.append(dom('span',{class:'helptext'},note));return root;
 }
 function renderPreview(){
- lastResult=PHCore.compile(project);$('code').textContent=lastResult.code;$('stepCount').textContent=lastResult.count+' Schritte';$('modeBadge').textContent=project.settings.preview?'Vorschau-Modus':'Echtbetrieb';$('modeBadge').className='mode'+(project.settings.preview?' on':'');$('exportScript').disabled=!!lastResult.errors.length||!lastResult.count;$('copyCode').disabled=!!lastResult.errors.length||!lastResult.count;
+ $('codeStyle').value=project.settings.style||'simple';lastResult=PHCore.compile(project);$('codeSize').textContent=lastResult.code.trim().split('\n').length+' Zeilen';$('code').textContent=lastResult.code;$('stepCount').textContent=lastResult.count+' Schritte';$('modeBadge').textContent=project.settings.preview?'Vorschau-Modus':'Echtbetrieb';$('modeBadge').className='mode'+(project.settings.preview?' on':'');$('exportScript').disabled=!!lastResult.errors.length||!lastResult.count;$('copyCode').disabled=!!lastResult.errors.length||!lastResult.count;
  $('issuesSummary').textContent='Ablaufprüfung · '+lastResult.errors.length+' Fehler · '+lastResult.warnings.length+' Hinweise';
  const issues=$('issues');issues.replaceChildren();if(!lastResult.errors.length)issues.append(dom('p',{class:'checkok'},'Pflichtfelder und bekannte Abhängigkeiten erfüllt.'));
  for(const e of [...lastResult.errors.map(e=>({...e,error:true})),...lastResult.warnings]){const div=dom('div',{class:'issue'+(e.error?' error':'')});if(e.uid){const b=dom('button',{},e.text);b.onclick=()=>{openIds.add(e.uid);const el=$(e.uid);if(el){el.open=true;el.scrollIntoView({behavior:'smooth',block:'center'});}};div.append(b);}else div.textContent=e.text;issues.append(div);}
@@ -611,6 +645,7 @@ $('projectTitle').oninput=()=>{project.title=$('projectTitle').value;changed();}
 $('saveProject').onclick=()=>download(filename()+'.powerhelp.json',JSON.stringify(project,null,2),'application/json');$('importProject').onclick=()=>$('projectFile').click();
 $('projectFile').onchange=async()=>{const f=$('projectFile').files[0];if(!f)return;try{if(f.size>16*1024*1024)throw Error('Projektdatei ist zu groß (maximal 16 MB).');const imported=PHCore.validateProject(JSON.parse(await f.text()));checkpoint();project=imported;refreshModules();insertUid=null;openIds.clear();renderAll();changed();toast('Projekt geladen');}catch(e){toast('Projekt nicht geladen: '+e.message);}finally{$('projectFile').value='';}};
 $('exportScript').onclick=()=>{const r=PHCore.compile(project);if(r.errors.length||!r.count)return;download(filename()+'.ps1','\uFEFF'+r.code.replace(/\r?\n/g,'\r\n'));};$('copyCode').onclick=()=>copy(lastResult.code);$('collapseAll').onclick=()=>{openIds.clear();renderSteps();};
+$('codeStyle').onchange=()=>{checkpoint();project.settings.style=$('codeStyle').value;changed();};
 function syncSettings(){ $('previewMode').checked=project.settings.preview;$('commentsMode').checked=project.settings.comments;$('scriptParams').value=project.settings.params;$('transcriptMode').checked=project.settings.transcript;$('logPath').value=project.settings.logPath;}
 $('settingsOpen').onclick=()=>{syncSettings();$('settingsDialog').showModal();};$('helpOpen').onclick=()=>$('helpDialog').showModal();$('regexOpen').onclick=()=>$('regexDialog').showModal();
 for(const [id,key]of [['previewMode','preview'],['commentsMode','comments'],['transcriptMode','transcript']])$(id).onchange=()=>{checkpoint();project.settings[key]=$(id).checked;changed();};for(const [id,key]of [['scriptParams','params'],['logPath','logPath']])$(id).oninput=()=>{project.settings[key]=$(id).value;changed();};
@@ -640,14 +675,6 @@ function drawIseFields(n,d,body,fields){
  fields.append(drawField(n,d,d.fields.find(f=>f.key==='_effect')));
  if(allowed.some(p=>p.pipeline||p.byProperty))fields.append(drawField(n,d,d.fields.find(f=>f.key==='_input')));
  else if(n.values._input){n.values._input='';}
- const inputField=fields.lastChild;
- if(inputField?.querySelector('input')&&allowed.some(p=>p.pipeline||p.byProperty)){
-  const select=dom('select',{'aria-label':'Vorhandene Eingabevariable'});select.append(dom('option',{value:''},'Vorhandene Variable wählen …'));
-  const scope=targetList(),index=scope.findIndex(s=>s.uid===n.uid),available=scope.slice(0,index<0?scope.length:index).filter(s=>s.out).map(s=>s.out);
-  const parent=insertUid?findNode(insertUid):null;if(parent?.def==='foreach')available.push(parent.values.item);
-  for(const name of [...new Set(available)])select.append(dom('option',{value:name},'$'+name));
-  select.onchange=()=>{checkpoint();n.values._input=select.value;renderSteps();changed();};inputField.append(select);
- }
  for(const sp of allowed){const f=d.fields.find(f=>f.key===sp.name);if(f&&(sp.mandatory||enabled.has(f.key)||PHCatalog.active(n.values[f.key])))fields.append(drawField(n,d,{...f,optional:!sp.mandatory}));}
  const more=dom('details',{class:'parameter-picker'});more.open=openIds.has(n.uid+'-params');more.ontoggle=()=>{if(more.open)openIds.add(n.uid+'-params');else openIds.delete(n.uid+'-params');};more.append(dom('summary',{},'Weitere Parameter ('+allowed.filter(p=>!p.mandatory).length+')'));
  for(const sp of allowed.filter(p=>!p.mandatory)){
