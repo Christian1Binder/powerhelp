@@ -63,3 +63,5 @@ const preview=c.compile({...simple(steps),settings:{style:'simple',preview:true,
 const custom=c.compile(simple([c.makeNode('custom',{code:"Get-Content 'x' -ErrorAction Stop",effect:'Nur lesen'})]));assert(custom.code.includes('-ErrorAction Stop'));
 for(const t of templates){assert.equal(c.compile(simple(t.steps.map(s=>c.makeNode(s.def,s.values,s.out,s.children)))).errors.length,0,t.id);}
 console.log('PASS: kurze Skripte, vier Zeilen Datei/Regex/CSV, Umbenennen, Quellenreihenfolge, Verschachtelung, Projektimport und Vorschau.');
+
+const each=c.makeNode('foreach',{input:'Dateien',item:'Datei'},undefined,[{def:'table',values:{input:'Datei'}}]);const scoped=[c.makeNode('files'),each];c.connectMatching(scoped);assert.equal(each.children[0].links.input,each.uid+':item');each.values.item='Fund';assert(c.compile(simple(scoped)).code.includes('$Fund | Format-Table'));

@@ -68,7 +68,7 @@ ${v.source?'        $PHDatei = $_\n':''}        $PHText = Get-Content -LiteralPa
  }
  function allNodes(steps){return steps.flatMap(n=>[n,...allNodes(n.children||[])]);}
  function sourcesBefore(steps,uid){
-  function visit(nodes,scope){for(const n of nodes){if(n.uid===uid)return scope;const inner=visit(n.children||[],scope.slice());if(inner)return inner;if(n.out)scope=[...scope,n];}return null;}
+  function visit(nodes,scope){for(const n of nodes){if(n.uid===uid)return scope;const childScope=n.def==='foreach'?[...scope,{uid:n.uid+':item',def:n.def,out:n.values.item}]:scope.slice();const inner=visit(n.children||[],childScope);if(inner)return inner;if(n.out)scope=[...scope,n];}return null;}
   return visit(steps,[])||[];
  }
  function connectMatching(steps){for(const n of allNodes(steps)){const d=PH_BY_ID[n.def];for(const key of [...(d.uses||[]),...(d.kind==='ise'?['_input']:[])]){if(n.links?.[key])continue;const source=sourcesBefore(steps,n.uid).findLast(s=>name(s.out).toLowerCase()===name(n.values[key]).toLowerCase());if(source){n.links??={};n.links[key]=source.uid;}}}return steps;}

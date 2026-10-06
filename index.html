@@ -400,7 +400,7 @@ ${v.source?'        $PHDatei = $_\n':''}        $PHText = Get-Content -LiteralPa
  }
  function allNodes(steps){return steps.flatMap(n=>[n,...allNodes(n.children||[])]);}
  function sourcesBefore(steps,uid){
-  function visit(nodes,scope){for(const n of nodes){if(n.uid===uid)return scope;const inner=visit(n.children||[],scope.slice());if(inner)return inner;if(n.out)scope=[...scope,n];}return null;}
+  function visit(nodes,scope){for(const n of nodes){if(n.uid===uid)return scope;const childScope=n.def==='foreach'?[...scope,{uid:n.uid+':item',def:n.def,out:n.values.item}]:scope.slice();const inner=visit(n.children||[],childScope);if(inner)return inner;if(n.out)scope=[...scope,n];}return null;}
   return visit(steps,[])||[];
  }
  function connectMatching(steps){for(const n of allNodes(steps)){const d=PH_BY_ID[n.def];for(const key of [...(d.uses||[]),...(d.kind==='ise'?['_input']:[])]){if(n.links?.[key])continue;const source=sourcesBefore(steps,n.uid).findLast(s=>name(s.out).toLowerCase()===name(n.values[key]).toLowerCase());if(source){n.links??={};n.links[key]=source.uid;}}}return steps;}
@@ -549,7 +549,7 @@ function uniqueOutput(out){const names=PHCore.allNodes(project.steps).map(n=>n.o
 function addCommand(id,values={}){checkpoint();const d=PH_BY_ID[id];const n=PHCore.makeNode(id,values,uniqueOutput(d.out||''));
  targetList().push(n);
  const sources=PHCore.sourcesBefore(project.steps,n.uid);
- for(const key of [...(d.uses||[]),...(d.kind==='ise'?['_input']:[])]){const source=Object.hasOwn(values,key)?sources.findLast(s=>s.out===values[key]):sources.at(-1);if(source){n.values[key]=source.out;n.links??={};n.links[key]=source.uid;}}
+ for(const key of [...(d.uses||[]),...(d.kind==='ise'&&PHCatalog.setOf(n,d)?.parameters.some(p=>p.pipeline||p.byProperty)?['_input']:[])]){const source=Object.hasOwn(values,key)?sources.findLast(s=>s.out===values[key]):sources.at(-1);if(source){n.values[key]=source.out;n.links??={};n.links[key]=source.uid;}}
  selectedUid=n.uid;openIds.add(n.uid);renderSteps();changed();toast('Baustein hinzugefügt');}
 function applyTemplate(t,replace){if(replace&&project.steps.length&&!confirm('Diesen Ablauf als neues Projekt laden? Das aktuelle Projekt vorher speichern, wenn du es behalten möchtest.'))return;checkpoint();const nodes=t.steps.map(s=>PHCore.makeNode(s.def,s.values,s.out,s.children));if(replace){project.steps=nodes;project.title=t.title;insertUid=null;openIds.clear();}else targetList().push(...nodes);PHCore.connectMatching(project.steps);selectedUid=nodes[0]?.uid;openIds.add(selectedUid);renderAll();changed();toast(replace?'Ablauf geladen':'Ablauf angehängt');}
 function renderLibrary(){
@@ -570,13 +570,14 @@ function renderLibrary(){
 }
 function setTab(value){tab=value;limit=30;renderLibrary();}
 function refreshModules(){const select=$('moduleSelect');select.replaceChildren(dom('option',{value:'Alle'},'Alle Module'));for(const m of [...new Set(PHCatalog.entries.map(d=>d.module))].sort())select.append(dom('option',{value:m},m));moduleName='Alle';}
+function flowLabel(n){const sources=PHCore.sourcesBefore(project.steps,n.uid);return Object.values(n.links||{}).map(uid=>sources.find(s=>s.uid===uid)?.out).filter(Boolean).map(out=>'$'+out+' → ').join('')+PH_BY_ID[n.def].command+(n.out?' → $'+n.out:'');}
 function renderSteps(){
  const root=$('steps');root.replaceChildren();
  function draw(nodes,prefix=''){
   const list=dom('div');nodes.forEach((n,index)=>{
    const d=PH_BY_ID[n.def],number=prefix+(index+1),details=dom('details',{class:'step'+(n.uid===selectedUid?' selected':''),id:n.uid});details.open=openIds.has(n.uid);
    details.addEventListener('toggle',()=>{if(details.open)openIds.add(n.uid);else openIds.delete(n.uid);});
-   const summary=dom('summary');summary.append(dom('span',{class:'stepnum'},number));const label=dom('span',{class:'steplabel'});label.append(dom('strong',{},d.title),dom('code',{},Object.values(n.links||{}).map(uid=>PHCore.allNodes(project.steps).find(s=>s.uid===uid)?.out).filter(Boolean).map(out=>'$'+out+' → ').join('')+d.command+(n.out?' → $'+n.out:'')));summary.append(label);
+   const summary=dom('summary');summary.append(dom('span',{class:'stepnum'},number));const label=dom('span',{class:'steplabel'});label.append(dom('strong',{},d.title),dom('code',{id:n.uid+'-flow'},flowLabel(n)));summary.append(label);
    const actions=dom('span',{class:'step-actions'});
    const action=(text,description,handler,disabled=false)=>{const b=dom('button',{type:'button','aria-label':description},text);b.disabled=disabled;b.onclick=e=>{e.preventDefault();e.stopPropagation();handler();};actions.append(b);};
    action('↑',d.title+' nach oben',()=>{checkpoint();[nodes[index-1],nodes[index]]=[nodes[index],nodes[index-1]];renderSteps();changed();},index===0);
@@ -588,7 +589,7 @@ function renderSteps(){
    summary.addEventListener('drop',e=>{e.preventDefault();details.classList.remove('dragover');if(!dragUid||dragUid===n.uid||findList(dragUid)!==nodes)return;checkpoint();const from=nodes.findIndex(s=>s.uid===dragUid),to=nodes.findIndex(s=>s.uid===n.uid);const [moved]=nodes.splice(from,1);nodes.splice(to,0,moved);dragUid=null;renderSteps();changed();});
    const body=dom('div',{class:'step-body'});body.append(dom('p',{class:'description'},d.description));const fields=dom('div',{class:'fields'});
    if(d.kind==='ise')drawIseFields(n,d,body,fields);else for(const f of d.fields)fields.append(drawField(n,d,f));body.append(fields);
-   if(d.out){const field=dom('div',{class:'field outfield'}),id=n.uid+'-out';field.append(dom('label',{class:'fieldlabel',for:id},d.kind==='ise'?'Ausgabevariable (optional, ohne $)':'Ausgabevariable (ohne $)'));const input=dom('input',{id,type:'text'});input.value=n.out;input.addEventListener('focus',checkpoint,{once:true});input.oninput=()=>{n.out=input.value;changed();};input.onchange=()=>{renderSteps();changed();};field.append(input);body.append(field);}
+   if(d.out){const field=dom('div',{class:'field outfield'}),id=n.uid+'-out';field.append(dom('label',{class:'fieldlabel',for:id},d.kind==='ise'?'Ausgabevariable (optional, ohne $)':'Ausgabevariable (ohne $)'));const input=dom('input',{id,type:'text'});input.value=n.out;input.addEventListener('focus',checkpoint,{once:true});input.oninput=()=>{n.out=input.value;changed();};field.append(input);body.append(field);}
    if(d.container){const tools=dom('div',{class:'block-tools'}),b=dom('button',{},'In diesen Block einfügen');b.onclick=()=>{insertUid=n.uid;selectedUid=n.uid;openIds.add(n.uid);renderSteps();$('search').focus();};tools.append(b);body.append(tools);const children=dom('div',{class:'children'});if(n.children.length)children.append(draw(n.children,number+'.'));else children.append(dom('div',{class:'empty'},'Hier erscheinen die Schritte innerhalb dieses Blocks.'));body.append(children);}
    const issue=dom('div',{id:n.uid+'-error',class:'step-error'});issue.hidden=true;body.append(issue);details.append(body);list.append(details);
   });return list;
@@ -614,7 +615,7 @@ function drawField(n,d,f){
   const linked=n.links?.[f.key];if(linked&&!sources.some(s=>s.uid===linked))select.append(dom('option',{value:linked},'⚠ Verbundene Quelle fehlt / steht später'));
   select.value=linked||'';
   select.onchange=()=>{checkpoint();n.links??={};if(select.value){n.links[f.key]=select.value;n.values[f.key]=sources.find(s=>s.uid===select.value).out;}else delete n.links[f.key];renderSteps();changed();};root.append(select);
-  if(linked){const source=sources.find(s=>s.uid===linked);root.append(dom('span',{class:'connection'},source?'↳ Verknüpft mit $'+source.out+' · Umbenennen wird übernommen':'Quelle zuerst wieder vor diesen Schritt setzen.'));return root;}
+  if(linked){const source=sources.find(s=>s.uid===linked);root.append(dom('span',{id:id+'-connection',class:'connection'},source?'↳ Verknüpft mit $'+source.out+' · Umbenennen wird übernommen':'Quelle zuerst wieder vor diesen Schritt setzen.'));return root;}
  }
  let input;
  if(f.type==='enum'&&!expression){input=dom('select',{id});if(f.optional)input.append(dom('option',{value:''},'Nicht verwenden'));for(const option of f.options)input.append(dom('option',{value:option},option==='TAB'?'Tabulator':option));input.value=n.values[f.key];}
@@ -627,7 +628,7 @@ function drawField(n,d,f){
  if(note)root.append(dom('span',{class:'helptext'},note));return root;
 }
 function renderPreview(){
- $('codeStyle').value=project.settings.style||'simple';lastResult=PHCore.compile(project);$('codeSize').textContent=lastResult.code.trim().split('\n').length+' Zeilen';$('code').textContent=lastResult.code;$('stepCount').textContent=lastResult.count+' Schritte';$('modeBadge').textContent=project.settings.preview?'Vorschau-Modus':'Echtbetrieb';$('modeBadge').className='mode'+(project.settings.preview?' on':'');$('exportScript').disabled=!!lastResult.errors.length||!lastResult.count;$('copyCode').disabled=!!lastResult.errors.length||!lastResult.count;
+ $('codeStyle').value=project.settings.style||'simple';for(const n of PHCore.allNodes(project.steps)){const flow=$(n.uid+'-flow');if(flow)flow.textContent=flowLabel(n);const sources=PHCore.sourcesBefore(project.steps,n.uid);for(const f of PH_BY_ID[n.def].fields){const select=$(n.uid+'-'+f.key+'-source');if(select)for(const option of select.options){const source=sources.find(s=>s.uid===option.value);if(source)option.textContent=PH_BY_ID[source.def].title+' → $'+source.out;}const connection=$(n.uid+'-'+f.key+'-connection'),source=sources.find(s=>s.uid===n.links?.[f.key]);if(connection&&source)connection.textContent='↳ Verknüpft mit $'+source.out+' · Umbenennen wird übernommen';}}lastResult=PHCore.compile(project);$('codeSize').textContent=lastResult.code.trim().split('\n').length+' Zeilen';$('code').textContent=lastResult.code;$('stepCount').textContent=lastResult.count+' Schritte';$('modeBadge').textContent=project.settings.preview?'Vorschau-Modus':'Echtbetrieb';$('modeBadge').className='mode'+(project.settings.preview?' on':'');$('exportScript').disabled=!!lastResult.errors.length||!lastResult.count;$('copyCode').disabled=!!lastResult.errors.length||!lastResult.count;
  $('issuesSummary').textContent='Ablaufprüfung · '+lastResult.errors.length+' Fehler · '+lastResult.warnings.length+' Hinweise';
  const issues=$('issues');issues.replaceChildren();if(!lastResult.errors.length)issues.append(dom('p',{class:'checkok'},'Pflichtfelder und bekannte Abhängigkeiten erfüllt.'));
  for(const e of [...lastResult.errors.map(e=>({...e,error:true})),...lastResult.warnings]){const div=dom('div',{class:'issue'+(e.error?' error':'')});if(e.uid){const b=dom('button',{},e.text);b.onclick=()=>{openIds.add(e.uid);const el=$(e.uid);if(el){el.open=true;el.scrollIntoView({behavior:'smooth',block:'center'});}};div.append(b);}else div.textContent=e.text;issues.append(div);}
